@@ -32,6 +32,16 @@ class BrowserDemoStaticTests(unittest.TestCase):
         self.assertIn("ensurePreferredDepthReady", html)
         self.assertIn("ML depth unavailable. Heuristic depth is active.", html)
 
+    def test_renderer_uses_fine_mesh_and_high_quality_export(self) -> None:
+        html = INDEX_HTML.read_text(encoding="utf-8")
+
+        self.assertIn('<option value="720x1280" selected>', html)
+        self.assertIn("const DEPTH_BASE_SIZE = 256", html)
+        self.assertIn("function getTileSize", html)
+        self.assertIn("function getVideoBitrate", html)
+        self.assertIn('imageSmoothingQuality = "high"', html)
+        self.assertNotIn("const size = width >= 720 ? 24 : 20", html)
+
 
 if __name__ == "__main__":
     unittest.main()

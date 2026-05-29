@@ -705,8 +705,8 @@
                 <label for="resolution">Resolution</label>
                 <select id="resolution">
                   <option value="360x640">360x640</option>
-                  <option value="540x960" selected>540x960</option>
-                  <option value="720x1280">720x1280</option>
+                  <option value="540x960">540x960</option>
+                  <option value="720x1280" selected>720x1280</option>
                   <option value="1080x1080">1080x1080</option>
                   <option value="1080x1350">1080x1350</option>
                   <option value="1920x1080">1920x1080</option>
@@ -766,6 +766,7 @@
       const depthFact = document.getElementById("depthFact");
       const aspectFact = document.getElementById("aspectFact");
       const ctx = canvas.getContext("2d", { alpha: false });
+      configureCanvasSmoothing(ctx);
 
       const TRANSFORMERS_URL = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/+esm";
       const DEMO_IMAGE_URL = "assets/demo.png";
@@ -773,7 +774,7 @@
         "onnx-community/depth-anything-v2-small",
         "Xenova/depth-anything-small-hf"
       ];
-      const DEPTH_BASE_SIZE = 128;
+      const DEPTH_BASE_SIZE = 256;
 
       const MIME_CANDIDATES = [
         "video/mp4;codecs=avc1.42E01E",
@@ -1088,11 +1089,13 @@
         updatePreviewAspect();
         canvas.width = width;
         canvas.height = height;
+        configureCanvasSmoothing(ctx);
 
         const base = document.createElement("canvas");
         base.width = width;
         base.height = height;
         const baseCtx = base.getContext("2d", { alpha: false });
+        configureCanvasSmoothing(baseCtx);
 
         drawCover(baseCtx, sourceImage, width, height, 1.04, false);
 
@@ -1132,6 +1135,11 @@
       function drawStill() {
         prepared = prepareScene();
         renderFrame(0);
+      }
+
+      function configureCanvasSmoothing(targetCtx) {
+        targetCtx.imageSmoothingEnabled = true;
+        targetCtx.imageSmoothingQuality = "high";
       }
 
       function hasCurrentMlDepth() {
@@ -1216,12 +1224,14 @@
         updatePreviewAspect();
         canvas.width = width;
         canvas.height = height;
+        configureCanvasSmoothing(ctx);
         ctx.fillStyle = "#24241f";
         ctx.fillRect(0, 0, width, height);
       }
 
       function drawCover(targetCtx, image, width, height, scale, blur) {
         targetCtx.save();
+        configureCanvasSmoothing(targetCtx);
         if (blur) {
           targetCtx.filter = "blur(34px) saturate(0.92) brightness(0.72)";
         }
@@ -1275,6 +1285,7 @@
         small.width = width;
         small.height = height;
         const smallCtx = small.getContext("2d", { willReadFrequently: true });
+        configureCanvasSmoothing(smallCtx);
         smallCtx.drawImage(base, 0, 0, width, height);
         const data = smallCtx.getImageData(0, 0, width, height).data;
         const luma = new Float32Array(width * height);
@@ -1426,6 +1437,7 @@
           input.width = Math.max(224, Math.round(maxSide * ratio));
         }
         const inputCtx = input.getContext("2d", { alpha: false });
+        configureCanvasSmoothing(inputCtx);
         inputCtx.drawImage(base, 0, 0, input.width, input.height);
         return input.toDataURL("image/jpeg", 0.9);
       }
@@ -1577,20 +1589,48 @@
       }
 
       function buildTiles(width, height, depth, depthWidth, depthHeight) {
-        const size = width >= 720 ? 24 : 20;
+        const size = getTileSize(width, height);
         const tiles = [];
         for (let y = 0; y < height; y += size) {
           for (let x = 0; x < width; x += size) {
             const tileWidth = Math.min(size, width - x);
             const tileHeight = Math.min(size, height - y);
-            const dx = Math.min(depthWidth - 1, Math.floor((x + tileWidth / 2) / width * depthWidth));
-            const dy = Math.min(depthHeight - 1, Math.floor((y + tileHeight / 2) / height * depthHeight));
-            const depthValue = depth[dy * depthWidth + dx];
+            const depthValue = sampleDepthValue(
+              depth,
+              depthWidth,
+              depthHeight,
+              width,
+              height,
+              x + tileWidth / 2,
+              y + tileHeight / 2
+            );
             tiles.push({ x, y, width: tileWidth, height: tileHeight, depth: depthValue });
           }
         }
         tiles.sort((a, b) => a.depth - b.depth);
         return tiles;
+      }
+
+      function getTileSize(width, height) {
+        const minSide = Math.min(width, height);
+        if (minSide <= 540) return 8;
+        if (minSide <= 720) return 10;
+        if (minSide <= 1080) return 12;
+        return 16;
+      }
+
+      function sampleDepthValue(depth, depthWidth, depthHeight, sceneWidth, sceneHeight, x, y) {
+        const gx = clamp(x / Math.max(1, sceneWidth - 1) * (depthWidth - 1), 0, depthWidth - 1);
+        const gy = clamp(y / Math.max(1, sceneHeight - 1) * (depthHeight - 1), 0, depthHeight - 1);
+        const x0 = Math.floor(gx);
+        const y0 = Math.floor(gy);
+        const x1 = Math.min(depthWidth - 1, x0 + 1);
+        const y1 = Math.min(depthHeight - 1, y0 + 1);
+        const tx = gx - x0;
+        const ty = gy - y0;
+        const top = depth[y0 * depthWidth + x0] * (1 - tx) + depth[y0 * depthWidth + x1] * tx;
+        const bottom = depth[y1 * depthWidth + x0] * (1 - tx) + depth[y1 * depthWidth + x1] * tx;
+        return top * (1 - ty) + bottom * ty;
       }
 
       function recordAnimation(mimeType) {
@@ -1602,7 +1642,7 @@
           const chunks = [];
           const recorder = new MediaRecorder(stream, {
             mimeType,
-            videoBitsPerSecond: prepared.width >= 720 ? 8500000 : 5000000
+            videoBitsPerSecond: getVideoBitrate(prepared.width, prepared.height, fps)
           });
 
           recorder.ondataavailable = (event) => {
@@ -1645,6 +1685,7 @@
         const strength = Number(strengthInput.value) / 100;
         const motion = getMotion(progress, strength, presetInput.value);
         ctx.save();
+        configureCanvasSmoothing(ctx);
         ctx.clearRect(0, 0, scene.width, scene.height);
         ctx.fillStyle = "#202020";
         ctx.fillRect(0, 0, scene.width, scene.height);
@@ -1663,11 +1704,11 @@
           const px = tile.x + tile.width / 2 - scene.width / 2;
           const py = tile.y + tile.height / 2 - scene.height / 2;
           const depthScale = 1 + near * motion.depthZoom;
-          const stretch = 1.8;
-          const targetX = scene.width / 2 + px * motion.globalScale * depthScale + motion.x * near - tile.width / 2 - stretch;
-          const targetY = scene.height / 2 + py * motion.globalScale * depthScale + motion.y * near - tile.height / 2 - stretch;
-          const targetWidth = tile.width * motion.globalScale * depthScale + stretch * 2;
-          const targetHeight = tile.height * motion.globalScale * depthScale + stretch * 2;
+          const overlap = getTileOverlap(tile.width, tile.height);
+          const targetX = scene.width / 2 + px * motion.globalScale * depthScale + motion.x * near - tile.width / 2 - overlap;
+          const targetY = scene.height / 2 + py * motion.globalScale * depthScale + motion.y * near - tile.height / 2 - overlap;
+          const targetWidth = tile.width * motion.globalScale * depthScale + overlap * 2;
+          const targetHeight = tile.height * motion.globalScale * depthScale + overlap * 2;
           ctx.drawImage(
             scene.base,
             tile.x,
@@ -1681,6 +1722,16 @@
           );
         }
         ctx.restore();
+      }
+
+      function getTileOverlap(width, height) {
+        return Math.max(0.7, Math.min(1.4, Math.min(width, height) * 0.08));
+      }
+
+      function getVideoBitrate(width, height, fps) {
+        const megapixels = width * height / 1000000;
+        const fpsFactor = clamp(fps / 30, 0.5, 1.25);
+        return Math.round(clamp(megapixels * fpsFactor * 14000000, 7500000, 28000000));
       }
 
       function getMotion(progress, strength, preset) {
