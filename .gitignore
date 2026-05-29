@@ -1,0 +1,16 @@
+.venv/
+.spikes/
+.omx/
+.playwright-mcp/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+.env.*
+.pytest_cache/
+.ruff_cache/
+uploads/*
+outputs/*
+samples/user_art/
+!uploads/.gitkeep
+!outputs/.gitkeep

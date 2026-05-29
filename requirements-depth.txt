@@ -1,0 +1,3 @@
+# Optional real-depth backend. Not required for the deterministic fallback MVP.
+transformers==5.9.0
+torch==2.12.0

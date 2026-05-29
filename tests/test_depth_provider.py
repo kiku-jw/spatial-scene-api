@@ -1,0 +1,31 @@
+from __future__ import annotations
+
+import unittest
+
+from app.depth import DepthAnythingProvider, FallbackDepthProvider, create_depth_provider
+from app.render import build_settings
+
+
+class DepthProviderTests(unittest.TestCase):
+    def test_build_settings_keeps_depth_provider_choice(self) -> None:
+        settings = build_settings(depth_provider="depth_anything")
+
+        self.assertEqual(settings.depth_provider, "depth_anything")
+
+    def test_depth_provider_factory_uses_fallback_by_default(self) -> None:
+        provider = create_depth_provider("fallback")
+
+        self.assertIsInstance(provider, FallbackDepthProvider)
+
+    def test_depth_provider_factory_creates_lazy_depth_anything_provider(self) -> None:
+        provider = create_depth_provider("depth_anything")
+
+        self.assertIsInstance(provider, DepthAnythingProvider)
+
+    def test_depth_provider_factory_rejects_unknown_provider(self) -> None:
+        with self.assertRaises(ValueError):
+            create_depth_provider("made_up")
+
+
+if __name__ == "__main__":
+    unittest.main()
