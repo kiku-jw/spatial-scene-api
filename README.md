@@ -12,7 +12,7 @@ Try the client-side demo:
 https://kiku-jw.github.io/spatial-scene-api/
 ```
 
-The browser demo is static GitHub Pages. It does not upload images or use the FastAPI backend. Rendering runs on the visitor's device with Canvas and the browser video encoder. Depending on browser support, the download may be MP4 or WebM.
+The browser demo is static GitHub Pages. It does not upload images or use the FastAPI backend. Rendering runs on the visitor's device with Canvas and the browser video encoder. The optional **Experimental ML Depth** button downloads a small Transformers.js depth-estimation model into the browser cache and uses it locally. Depending on browser support, the download may be MP4 or WebM.
 
 ## Why This Is Parked
 
@@ -231,7 +231,7 @@ That gallery includes original image, ML depth preview, and the three rendered p
 - A 10-second 720x1280 render can take tens of seconds on a local CPU.
 - ML-depth layered rendering is more spatial, but much slower than fallback and can introduce edge halos around depth boundaries.
 - DepthFlow output is much better and faster locally, but DepthFlow and ShaderFlow are AGPL-3.0. Treat this path as an isolated local spike until licensing is resolved.
-- The GitHub Pages browser demo uses a lighter heuristic Canvas renderer. It is zero-infrastructure, but lower quality than the FastAPI/DepthFlow paths.
+- The GitHub Pages browser demo uses a lighter Canvas renderer. Its default heuristic depth is instant but rough; **Experimental ML Depth** improves the map locally at the cost of a first-run model download and slower setup.
 - Browser demo export depends on browser encoder support, so output can be MP4 or WebM.
 - No auth, billing, queues, webhooks, batch mode, or cloud deployment.
 - Output resolution is currently tied to aspect ratio with 9:16 rendering at 720x1280.

@@ -124,6 +124,10 @@
         margin-bottom: 14px;
       }
 
+      .field button {
+        width: 100%;
+      }
+
       .grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -351,6 +355,10 @@
             <button class="secondary" id="demoButton" type="button">Load Demo Image</button>
           </div>
 
+          <div class="field">
+            <button class="secondary" id="mlDepthButton" type="button">Experimental ML Depth</button>
+          </div>
+
           <div class="grid">
             <div class="field">
               <label for="preset">Preset</label>
@@ -417,7 +425,7 @@
             </p>
             <div class="facts">
               <div class="fact"><span>Renderer</span><strong>Canvas mesh warp</strong></div>
-              <div class="fact"><span>Depth</span><strong>Heuristic local map</strong></div>
+              <div class="fact"><span>Depth</span><strong id="depthFact">Heuristic local map</strong></div>
               <div class="fact"><span>Aspect</span><strong>9:16</strong></div>
               <div class="fact"><span>Privacy</span><strong>Local browser only</strong></div>
               <div class="fact"><span>Output</span><strong id="formatFact">Detecting...</strong></div>
@@ -437,6 +445,7 @@
       const strengthInput = document.getElementById("strength");
       const strengthValue = document.getElementById("strengthValue");
       const renderButton = document.getElementById("renderButton");
+      const mlDepthButton = document.getElementById("mlDepthButton");
       const downloadLink = document.getElementById("downloadLink");
       const statusNode = document.getElementById("status");
       const progressBar = document.getElementById("progressBar");
@@ -444,7 +453,16 @@
       const video = document.getElementById("video");
       const emptyState = document.getElementById("emptyState");
       const formatFact = document.getElementById("formatFact");
+      const depthFact = document.getElementById("depthFact");
       const ctx = canvas.getContext("2d", { alpha: false });
+
+      const TRANSFORMERS_URL = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0/+esm";
+      const ML_DEPTH_MODELS = [
+        "onnx-community/depth-anything-v2-small",
+        "Xenova/depth-anything-small-hf"
+      ];
+      const DEPTH_WIDTH = 72;
+      const DEPTH_HEIGHT = 128;
 
       const MIME_CANDIDATES = [
         "video/mp4;codecs=avc1.42E01E",
@@ -455,11 +473,16 @@
       ];
 
       let sourceImage = null;
+      let sourceImageToken = 0;
       let prepared = null;
       let lastVideoUrl = null;
+      let depthMode = "heuristic";
+      let mlDepthMap = null;
+      let depthPipelinePromise = null;
 
       updateFormatFact();
       updateStrengthLabel();
+      updateDepthUi();
       renderPlaceholder();
 
       imageInput.addEventListener("change", async () => {
@@ -468,7 +491,9 @@
         try {
           setStatus("Loading image...");
           sourceImage = await loadImageFromFile(file);
+          sourceImageToken += 1;
           prepared = null;
+          resetDepthMode();
           video.style.display = "none";
           canvas.style.display = "block";
           emptyState.style.display = "none";
@@ -481,7 +506,9 @@
 
       demoButton.addEventListener("click", async () => {
         sourceImage = await createDemoImage();
+        sourceImageToken += 1;
         prepared = null;
+        resetDepthMode();
         imageInput.value = "";
         video.style.display = "none";
         canvas.style.display = "block";
@@ -492,6 +519,7 @@
 
       resolutionInput.addEventListener("change", () => {
         prepared = null;
+        resetDepthMode();
         if (sourceImage) drawStill();
       });
 
@@ -512,9 +540,7 @@
           return;
         }
 
-        renderButton.disabled = true;
-        demoButton.disabled = true;
-        imageInput.disabled = true;
+        setControlsBusy(true);
         downloadLink.setAttribute("aria-disabled", "true");
         downloadLink.removeAttribute("href");
         progressBar.style.width = "0%";
@@ -540,9 +566,48 @@
         } catch (error) {
           setError(error.message);
         } finally {
-          renderButton.disabled = false;
-          demoButton.disabled = false;
-          imageInput.disabled = false;
+          setControlsBusy(false);
+        }
+      });
+
+      mlDepthButton.addEventListener("click", async () => {
+        if (!sourceImage) {
+          setError("Load an image first.");
+          return;
+        }
+
+        setControlsBusy(true);
+        progressBar.style.width = "0%";
+        video.style.display = "none";
+        canvas.style.display = "block";
+        emptyState.style.display = "none";
+
+        try {
+          const baseScene = prepareBaseScene();
+          setStatus("Loading experimental ML depth model...");
+          const depthMap = await buildMlDepthMap(baseScene.base, DEPTH_WIDTH, DEPTH_HEIGHT);
+          mlDepthMap = {
+            key: getSceneKey(),
+            width: depthMap.width,
+            height: depthMap.height,
+            data: depthMap.data,
+            label: depthMap.label
+          };
+          depthMode = "ml";
+          prepared = buildSceneFromBase(baseScene, mlDepthMap);
+          renderFrame(0);
+          updateDepthUi();
+          progressBar.style.width = "100%";
+          setStatus(`${depthMap.label} ready. Render will use local browser inference.`);
+        } catch (error) {
+          depthMode = "heuristic";
+          mlDepthMap = null;
+          prepared = null;
+          updateDepthUi();
+          if (sourceImage) drawStill();
+          setError(`ML depth failed. Using heuristic depth. ${error.message}`);
+        } finally {
+          setControlsBusy(false);
         }
       });
 
@@ -566,6 +631,26 @@
         strengthValue.textContent = strengthInput.value;
       }
 
+      function updateDepthUi() {
+        const label = depthMode === "ml" && mlDepthMap ? mlDepthMap.label : "Heuristic local map";
+        depthFact.textContent = label;
+        mlDepthButton.textContent = depthMode === "ml" && mlDepthMap ? "ML Depth Active" : "Experimental ML Depth";
+        mlDepthButton.disabled = !sourceImage;
+      }
+
+      function resetDepthMode() {
+        depthMode = "heuristic";
+        mlDepthMap = null;
+        updateDepthUi();
+      }
+
+      function setControlsBusy(isBusy) {
+        renderButton.disabled = isBusy;
+        demoButton.disabled = isBusy;
+        imageInput.disabled = isBusy;
+        mlDepthButton.disabled = isBusy || !sourceImage;
+      }
+
       function setStatus(message) {
         statusNode.classList.remove("error");
         statusNode.textContent = message;
@@ -579,6 +664,11 @@
       function parseResolution() {
         const [width, height] = resolutionInput.value.split("x").map((value) => Number(value));
         return { width, height };
+      }
+
+      function getSceneKey() {
+        const { width, height } = parseResolution();
+        return `${sourceImageToken}:${width}x${height}`;
       }
 
       function loadImageFromFile(file) {
@@ -647,7 +737,7 @@
         });
       }
 
-      function prepareScene() {
+      function prepareBaseScene() {
         const { width, height } = parseResolution();
         canvas.width = width;
         canvas.height = height;
@@ -660,12 +750,36 @@
         drawCover(baseCtx, sourceImage, width, height, 1.12, true);
         drawContain(baseCtx, sourceImage, width, height, 0.97);
 
-        const depthWidth = 72;
-        const depthHeight = 128;
-        const depth = buildDepthMap(base, depthWidth, depthHeight);
-        const tiles = buildTiles(width, height, depth, depthWidth, depthHeight);
+        return { width, height, base };
+      }
 
-        return { width, height, base, tiles };
+      function buildSceneFromBase(baseScene, depthMap) {
+        const tiles = buildTiles(baseScene.width, baseScene.height, depthMap.data, depthMap.width, depthMap.height);
+        return {
+          width: baseScene.width,
+          height: baseScene.height,
+          base: baseScene.base,
+          tiles
+        };
+      }
+
+      function getActiveDepthMap(base) {
+        if (depthMode === "ml" && mlDepthMap && mlDepthMap.key === getSceneKey()) {
+          return mlDepthMap;
+        }
+        const depth = buildDepthMap(base, DEPTH_WIDTH, DEPTH_HEIGHT);
+        return {
+          key: getSceneKey(),
+          width: DEPTH_WIDTH,
+          height: DEPTH_HEIGHT,
+          data: depth,
+          label: "Heuristic local map"
+        };
+      }
+
+      function prepareScene() {
+        const baseScene = prepareBaseScene();
+        return buildSceneFromBase(baseScene, getActiveDepthMap(baseScene.base));
       }
 
       function drawStill() {
@@ -773,6 +887,226 @@
         }
 
         return smoothDepth(normalized, width, height, 3);
+      }
+
+      async function buildMlDepthMap(base, width, height) {
+        const depthPipeline = await getDepthPipeline();
+        setStatus("Estimating depth locally...");
+        progressBar.style.width = "92%";
+
+        const input = createDepthInput(base);
+        const output = await depthPipeline.estimator(input);
+        const depthOutput = Array.isArray(output) ? output[0] : output;
+        const rawDepth = await extractDepthArray(depthOutput, width, height);
+        const orientedDepth = orientDepth(rawDepth, width, height);
+
+        return {
+          width,
+          height,
+          data: smoothDepth(orientedDepth, width, height, 2),
+          label: depthPipeline.label
+        };
+      }
+
+      async function getDepthPipeline() {
+        if (!depthPipelinePromise) {
+          depthPipelinePromise = createDepthPipeline();
+        }
+        try {
+          return await depthPipelinePromise;
+        } catch (error) {
+          depthPipelinePromise = null;
+          throw error;
+        }
+      }
+
+      async function createDepthPipeline() {
+        const module = await import(TRANSFORMERS_URL);
+        if (module.env) {
+          module.env.allowLocalModels = false;
+          if (module.env.backends && module.env.backends.onnx && module.env.backends.onnx.wasm) {
+            module.env.backends.onnx.wasm.numThreads = 1;
+          }
+        }
+
+        const backends = getDepthBackends();
+        let lastError = null;
+        for (const model of ML_DEPTH_MODELS) {
+          for (const backend of backends) {
+            const options = {
+              progress_callback: updateMlProgress
+            };
+            if (backend.device) options.device = backend.device;
+            if (backend.dtype) options.dtype = backend.dtype;
+
+            try {
+              const estimator = await module.pipeline("depth-estimation", model, options);
+              return {
+                estimator,
+                label: model.includes("v2") ? "Depth Anything V2 Small" : "Depth Anything Small"
+              };
+            } catch (error) {
+              lastError = error;
+            }
+          }
+        }
+
+        throw new Error(lastError ? lastError.message : "Could not load a browser depth model.");
+      }
+
+      function getDepthBackends() {
+        const backends = [];
+        if (navigator.gpu) {
+          backends.push({ device: "webgpu", dtype: "fp16" });
+          backends.push({ device: "webgpu" });
+        }
+        backends.push({ device: "wasm", dtype: "q8" });
+        backends.push({ device: "wasm" });
+        return backends;
+      }
+
+      function updateMlProgress(event) {
+        if (!event || !event.status) return;
+        if (event.status === "progress" && typeof event.progress === "number") {
+          const progress = clamp(Math.round(event.progress), 1, 90);
+          progressBar.style.width = `${progress}%`;
+          setStatus(`Loading experimental ML depth model... ${progress}%`);
+          return;
+        }
+        if (event.status === "ready") {
+          setStatus("Preparing local depth estimator...");
+        }
+      }
+
+      function createDepthInput(base) {
+        const input = document.createElement("canvas");
+        input.width = 378;
+        input.height = 672;
+        const inputCtx = input.getContext("2d", { alpha: false });
+        inputCtx.drawImage(base, 0, 0, input.width, input.height);
+        return input.toDataURL("image/jpeg", 0.9);
+      }
+
+      async function extractDepthArray(output, width, height) {
+        if (!output) {
+          throw new Error("Depth model returned no output.");
+        }
+
+        if (output.depth) {
+          return rawImageToDepthArray(output.depth, width, height);
+        }
+
+        if (output.predicted_depth) {
+          return tensorToDepthArray(output.predicted_depth, width, height);
+        }
+
+        if (output.data && output.dims) {
+          return tensorToDepthArray(output, width, height);
+        }
+
+        if (output.data && output.width && output.height) {
+          return rawImageToDepthArray(output, width, height);
+        }
+
+        throw new Error("Depth model output format is not supported.");
+      }
+
+      async function rawImageToDepthArray(rawImage, width, height) {
+        let image = rawImage;
+        if (typeof image.grayscale === "function") {
+          image = await image.grayscale();
+        }
+        if (typeof image.resize === "function") {
+          image = await image.resize(width, height);
+        }
+
+        const data = image.data;
+        const sourceWidth = image.width || width;
+        const sourceHeight = image.height || height;
+        const channels = image.channels || Math.max(1, Math.round(data.length / Math.max(1, sourceWidth * sourceHeight)));
+        return normalizeDepthValues(sampleRaster(data, sourceWidth, sourceHeight, channels, width, height), width, height);
+      }
+
+      function tensorToDepthArray(tensor, width, height) {
+        const dims = tensor.dims || [];
+        const sourceWidth = dims.length >= 2 ? dims[dims.length - 1] : width;
+        const sourceHeight = dims.length >= 2 ? dims[dims.length - 2] : height;
+        return normalizeDepthValues(sampleRaster(tensor.data, sourceWidth, sourceHeight, 1, width, height), width, height);
+      }
+
+      function sampleRaster(data, sourceWidth, sourceHeight, channels, width, height) {
+        const output = new Float32Array(width * height);
+        const channelCount = Math.max(1, channels);
+        for (let y = 0; y < height; y += 1) {
+          const sourceY = Math.min(sourceHeight - 1, Math.round(y / Math.max(1, height - 1) * (sourceHeight - 1)));
+          for (let x = 0; x < width; x += 1) {
+            const sourceX = Math.min(sourceWidth - 1, Math.round(x / Math.max(1, width - 1) * (sourceWidth - 1)));
+            const sourceIndex = (sourceY * sourceWidth + sourceX) * channelCount;
+            if (channelCount >= 3) {
+              output[y * width + x] = data[sourceIndex] * 0.299 + data[sourceIndex + 1] * 0.587 + data[sourceIndex + 2] * 0.114;
+            } else {
+              output[y * width + x] = data[sourceIndex];
+            }
+          }
+        }
+        return output;
+      }
+
+      function normalizeDepthValues(values, width, height) {
+        let min = Infinity;
+        let max = -Infinity;
+        for (const value of values) {
+          if (!Number.isFinite(value)) continue;
+          min = Math.min(min, value);
+          max = Math.max(max, value);
+        }
+
+        const output = new Float32Array(width * height);
+        if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
+          output.fill(0.5);
+          return output;
+        }
+
+        const span = max - min;
+        for (let index = 0; index < values.length; index += 1) {
+          output[index] = (values[index] - min) / span;
+        }
+        return output;
+      }
+
+      function orientDepth(depth, width, height) {
+        let centerTotal = 0;
+        let centerCount = 0;
+        let borderTotal = 0;
+        let borderCount = 0;
+
+        for (let y = 0; y < height; y += 1) {
+          const ny = y / Math.max(1, height - 1);
+          for (let x = 0; x < width; x += 1) {
+            const nx = x / Math.max(1, width - 1);
+            const value = depth[y * width + x];
+            const centered = nx > 0.28 && nx < 0.72 && ny > 0.22 && ny < 0.78;
+            const border = nx < 0.12 || nx > 0.88 || ny < 0.12 || ny > 0.88;
+            if (centered) {
+              centerTotal += value;
+              centerCount += 1;
+            }
+            if (border) {
+              borderTotal += value;
+              borderCount += 1;
+            }
+          }
+        }
+
+        if (!centerCount || !borderCount || centerTotal / centerCount >= borderTotal / borderCount) {
+          return depth;
+        }
+
+        const inverted = new Float32Array(width * height);
+        for (let index = 0; index < depth.length; index += 1) {
+          inverted[index] = 1 - depth[index];
+        }
+        return inverted;
       }
 
       function smoothDepth(input, width, height, passes) {
