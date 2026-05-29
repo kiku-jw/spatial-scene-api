@@ -8,16 +8,21 @@
     <title>Spatial Scene Browser Demo</title>
     <style>
       :root {
-        color-scheme: light;
-        --bg: #f5f5f2;
-        --panel: #ffffff;
-        --text: #171717;
-        --muted: #666a61;
-        --line: #d8d8d0;
-        --accent: #1f7a5a;
-        --accent-dark: #145d43;
-        --danger: #a23b2a;
-        --shadow: 0 18px 50px rgba(30, 28, 22, 0.11);
+        color-scheme: dark;
+        --bg: #090a08;
+        --panel: #11120f;
+        --panel-soft: #171812;
+        --field: #0d0e0b;
+        --text: #f3efe5;
+        --muted: #a7a092;
+        --faint: #716b5f;
+        --line: rgba(243, 239, 229, 0.14);
+        --line-strong: rgba(243, 239, 229, 0.22);
+        --accent: #d5b86a;
+        --accent-dark: #b99649;
+        --green: #65c7a3;
+        --danger: #ff8a70;
+        --shadow: 0 28px 90px rgba(0, 0, 0, 0.42);
       }
 
       * {
@@ -32,22 +37,22 @@
       }
 
       main {
-        width: min(1180px, calc(100vw - 32px));
+        width: min(1360px, calc(100vw - 32px));
         margin: 0 auto;
-        padding: 22px 0 32px;
+        padding: 20px 0 28px;
       }
 
       header {
         display: flex;
-        align-items: end;
+        align-items: center;
         justify-content: space-between;
         gap: 16px;
-        margin-bottom: 18px;
+        margin-bottom: 16px;
       }
 
       h1 {
         margin: 0 0 5px;
-        font-size: 26px;
+        font-size: 24px;
         line-height: 1.1;
         letter-spacing: 0;
       }
@@ -62,17 +67,17 @@
       .badge {
         flex: 0 0 auto;
         border: 1px solid var(--line);
-        border-radius: 999px;
+        border-radius: 8px;
         padding: 7px 11px;
         color: var(--muted);
-        background: rgba(255, 255, 255, 0.62);
+        background: var(--panel-soft);
         font-size: 13px;
         white-space: nowrap;
       }
 
       .workspace {
         display: grid;
-        grid-template-columns: 360px minmax(0, 1fr);
+        grid-template-columns: 342px minmax(0, 1fr);
         gap: 18px;
         align-items: start;
       }
@@ -86,6 +91,8 @@
 
       .controls {
         padding: 16px;
+        position: sticky;
+        top: 16px;
       }
 
       label {
@@ -94,7 +101,7 @@
         color: var(--muted);
         font-size: 12px;
         font-weight: 700;
-        letter-spacing: 0.04em;
+        letter-spacing: 0;
         text-transform: uppercase;
       }
 
@@ -109,10 +116,35 @@
       input[type="number"] {
         width: 100%;
         border: 1px solid var(--line);
-        border-radius: 6px;
-        background: #fbfbf8;
+        border-radius: 8px;
+        background: var(--field);
         color: var(--text);
         padding: 10px 11px;
+      }
+
+      input[type="file"] {
+        color: var(--muted);
+      }
+
+      input[type="file"]::file-selector-button {
+        border: 1px solid var(--line-strong);
+        border-radius: 6px;
+        background: var(--panel-soft);
+        color: var(--text);
+        padding: 7px 10px;
+        margin-right: 10px;
+        cursor: pointer;
+        font-weight: 700;
+      }
+
+      input[type="file"]::file-selector-button:hover {
+        border-color: var(--accent);
+      }
+
+      select:focus,
+      input:focus {
+        outline: 2px solid rgba(213, 184, 106, 0.32);
+        outline-offset: 2px;
       }
 
       input[type="range"] {
@@ -158,28 +190,37 @@
       .download {
         min-height: 42px;
         border: 1px solid transparent;
-        border-radius: 6px;
+        border-radius: 8px;
         padding: 10px 12px;
         cursor: pointer;
         text-align: center;
         text-decoration: none;
         font-weight: 700;
+        transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease;
       }
 
       button.primary {
         background: var(--accent);
-        color: white;
+        color: #12100b;
+        box-shadow: 0 10px 26px rgba(213, 184, 106, 0.18);
       }
 
       button.primary:hover {
         background: var(--accent-dark);
+        transform: translateY(-1px);
       }
 
       button.secondary,
       .download {
-        background: #f4f4ef;
+        background: var(--panel-soft);
         border-color: var(--line);
         color: var(--text);
+      }
+
+      button.secondary:hover,
+      .download:hover {
+        border-color: var(--line-strong);
+        transform: translateY(-1px);
       }
 
       button:disabled,
@@ -205,8 +246,8 @@
         width: 100%;
         height: 7px;
         margin-top: 11px;
-        border-radius: 99px;
-        background: #ededdf;
+        border-radius: 8px;
+        background: rgba(243, 239, 229, 0.1);
       }
 
       .progress span {
@@ -219,17 +260,63 @@
 
       .stage {
         display: grid;
-        grid-template-columns: minmax(260px, 52vh) minmax(0, 1fr);
-        gap: 16px;
-        padding: 16px;
+        grid-template-columns: minmax(280px, 1fr) 280px;
+        gap: 18px;
+        align-items: center;
+        min-height: 620px;
+        height: calc(100vh - 116px);
+        max-height: 840px;
+        padding: 18px;
       }
 
       .canvas-wrap {
         position: relative;
         overflow: hidden;
         border-radius: 8px;
-        background: #222;
+        border: 1px solid rgba(243, 239, 229, 0.18);
+        background: #050604;
+        box-shadow:
+          0 34px 90px rgba(0, 0, 0, 0.56),
+          0 0 0 8px rgba(243, 239, 229, 0.035);
+        justify-self: center;
+        width: min(100%, 420px, 40vh);
+        max-width: 100%;
         aspect-ratio: 9 / 16;
+      }
+
+      .canvas-wrap::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), inset 0 0 80px rgba(0, 0, 0, 0.24);
+        z-index: 3;
+      }
+
+      .canvas-wrap::after {
+        content: "";
+        position: absolute;
+        inset: -35% -80%;
+        pointer-events: none;
+        background: linear-gradient(90deg, transparent 35%, rgba(255, 255, 255, 0.16) 50%, transparent 65%);
+        opacity: 0;
+        transform: translateX(-30%);
+        z-index: 4;
+      }
+
+      body.is-rendering .canvas-wrap::after,
+      body.is-depthing .canvas-wrap::after {
+        animation: studioSweep 2.4s ease-in-out infinite;
+        opacity: 0.38;
+      }
+
+      @keyframes studioSweep {
+        0% {
+          transform: translateX(-32%);
+        }
+        100% {
+          transform: translateX(32%);
+        }
       }
 
       canvas,
@@ -251,14 +338,18 @@
         display: grid;
         place-items: center;
         padding: 20px;
-        color: #d9d9d0;
+        color: var(--muted);
         text-align: center;
         font-size: 14px;
-        background: #24241f;
+        background: #050604;
       }
 
       .details {
         min-width: 0;
+        align-self: stretch;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
       }
 
       .details h2 {
@@ -271,7 +362,7 @@
         margin: 0 0 12px;
         color: var(--muted);
         font-size: 14px;
-        line-height: 1.55;
+        line-height: 1.5;
       }
 
       .facts {
@@ -281,10 +372,10 @@
       }
 
       .fact {
-        display: flex;
-        justify-content: space-between;
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr);
         gap: 12px;
-        border-bottom: 1px solid #ecece4;
+        border-bottom: 1px solid rgba(243, 239, 229, 0.09);
         padding-bottom: 8px;
         color: var(--muted);
         font-size: 13px;
@@ -294,6 +385,34 @@
         color: var(--text);
         font-weight: 700;
         text-align: right;
+        overflow-wrap: anywhere;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          scroll-behavior: auto !important;
+          transition-duration: 0.001ms !important;
+        }
+      }
+
+      @media (max-width: 1080px) {
+        .workspace {
+          grid-template-columns: 318px minmax(0, 1fr);
+        }
+
+        .stage {
+          grid-template-columns: minmax(260px, 1fr);
+          height: auto;
+          max-height: none;
+        }
+
+        .details {
+          justify-content: start;
+        }
       }
 
       @media (max-width: 880px) {
@@ -308,6 +427,10 @@
           display: block;
         }
 
+        .controls {
+          position: static;
+        }
+
         .badge {
           display: inline-block;
           margin-top: 10px;
@@ -319,6 +442,13 @@
 
         .details {
           margin-top: 15px;
+        }
+
+        .canvas-wrap {
+          width: min(100%, 380px);
+          height: auto;
+          min-height: 0;
+          margin: 0 auto;
         }
       }
 
@@ -416,12 +546,12 @@
           </div>
 
           <div class="details">
-            <h2>What this page does</h2>
+            <h2>Studio run</h2>
             <p>
-              This is the browser-only version of the parked Spatial Scene prototype. It uses a deterministic heuristic depth map and tiled canvas warping. It is not generative video and does not send the image anywhere.
+              Browser-only parallax rendering. No upload, no generative video, no rewritten image content.
             </p>
             <p>
-              Export uses the browser encoder. Some browsers produce MP4, others produce WebM.
+              Experimental ML depth runs locally and can take a moment on first launch.
             </p>
             <div class="facts">
               <div class="fact"><span>Renderer</span><strong>Canvas mesh warp</strong></div>
@@ -476,6 +606,7 @@
       let sourceImageToken = 0;
       let prepared = null;
       let lastVideoUrl = null;
+      let lastPosterUrl = null;
       let depthMode = "heuristic";
       let mlDepthMap = null;
       let depthPipelinePromise = null;
@@ -547,6 +678,7 @@
         video.style.display = "none";
         canvas.style.display = "block";
         emptyState.style.display = "none";
+        document.body.classList.add("is-rendering");
 
         try {
           prepared = prepareScene();
@@ -556,7 +688,9 @@
           if (lastVideoUrl) URL.revokeObjectURL(lastVideoUrl);
           lastVideoUrl = url;
 
+          setVideoPosterFromCanvas();
           video.src = url;
+          primeVideoPreview();
           video.style.display = "block";
           canvas.style.display = "none";
           downloadLink.href = url;
@@ -566,6 +700,7 @@
         } catch (error) {
           setError(error.message);
         } finally {
+          document.body.classList.remove("is-rendering");
           setControlsBusy(false);
         }
       });
@@ -581,6 +716,7 @@
         video.style.display = "none";
         canvas.style.display = "block";
         emptyState.style.display = "none";
+        document.body.classList.add("is-depthing");
 
         try {
           const baseScene = prepareBaseScene();
@@ -607,6 +743,7 @@
           if (sourceImage) drawStill();
           setError(`ML depth failed. Using heuristic depth. ${error.message}`);
         } finally {
+          document.body.classList.remove("is-depthing");
           setControlsBusy(false);
         }
       });
@@ -620,6 +757,28 @@
       function pickMimeType() {
         if (!window.MediaRecorder) return "";
         return MIME_CANDIDATES.find((mimeType) => MediaRecorder.isTypeSupported(mimeType)) || "";
+      }
+
+      function setVideoPosterFromCanvas() {
+        canvas.toBlob((blob) => {
+          if (!blob) return;
+          const posterUrl = URL.createObjectURL(blob);
+          if (lastPosterUrl) URL.revokeObjectURL(lastPosterUrl);
+          lastPosterUrl = posterUrl;
+          video.poster = posterUrl;
+        }, "image/jpeg", 0.9);
+      }
+
+      function primeVideoPreview() {
+        const seekPreviewFrame = () => {
+          if (!Number.isFinite(video.duration) || video.duration <= 0) return;
+          video.currentTime = Math.min(0.12, Math.max(0.01, video.duration * 0.08));
+        };
+        if (video.readyState >= 1) {
+          seekPreviewFrame();
+        } else {
+          video.addEventListener("loadedmetadata", seekPreviewFrame, { once: true });
+        }
       }
 
       function updateFormatFact() {
@@ -798,7 +957,7 @@
       function drawCover(targetCtx, image, width, height, scale, blur) {
         targetCtx.save();
         if (blur) {
-          targetCtx.filter = "blur(18px) saturate(1.08)";
+          targetCtx.filter = "blur(34px) saturate(0.92) brightness(0.72)";
         }
         const imageRatio = image.width / image.height;
         const targetRatio = width / height;
@@ -814,6 +973,11 @@
         const dx = (width - drawWidth) / 2;
         const dy = (height - drawHeight) / 2;
         targetCtx.drawImage(image, dx, dy, drawWidth, drawHeight);
+        if (blur) {
+          targetCtx.filter = "none";
+          targetCtx.fillStyle = "rgba(5, 6, 4, 0.2)";
+          targetCtx.fillRect(0, 0, width, height);
+        }
         targetCtx.restore();
       }
 
@@ -1154,6 +1318,7 @@
         return new Promise((resolve, reject) => {
           const fps = clamp(Number(fpsInput.value) || 24, 8, 30);
           const durationSeconds = clamp(Number(durationInput.value) || 5, 1, 10);
+          renderFrame(0);
           const stream = canvas.captureStream(fps);
           const chunks = [];
           const recorder = new MediaRecorder(stream, {
