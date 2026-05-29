@@ -118,6 +118,15 @@ def _motion_args(settings: RenderSettings) -> list[str]:
             "0.10",
             "--no-loop",
         ]
+    if settings.preset == "zoom_in_out":
+        return [
+            "zoom",
+            "-i",
+            f"{intensity:.2f}",
+            "horizontal",
+            "-i",
+            "0.08",
+        ]
     if settings.preset == "zoom_out":
         return [
             "zoom",

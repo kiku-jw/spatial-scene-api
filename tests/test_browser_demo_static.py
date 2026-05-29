@@ -40,6 +40,9 @@ class BrowserDemoStaticTests(unittest.TestCase):
     def test_renderer_uses_fine_mesh_and_high_quality_export(self) -> None:
         html = INDEX_HTML.read_text(encoding="utf-8")
 
+        self.assertIn('<option value="zoom_in_out">zoom_in_out</option>', html)
+        self.assertIn('if (preset === "zoom_in_out")', html)
+        self.assertIn("const pingPong = 0.5 - 0.5 * Math.cos(progress * Math.PI * 2);", html)
         self.assertIn('<option value="1920x1080" selected>', html)
         self.assertIn('<input id="fps" type="number" min="8" max="30" step="1" value="30">', html)
         self.assertIn("const fps = clamp(Number(fpsInput.value) || 30, 8, 30);", html)
@@ -48,6 +51,15 @@ class BrowserDemoStaticTests(unittest.TestCase):
         self.assertIn("function getVideoBitrate", html)
         self.assertIn('imageSmoothingQuality = "high"', html)
         self.assertNotIn("const size = width >= 720 ? 24 : 20", html)
+
+    def test_orbit_renderer_uses_extra_overscan_and_tamer_depth_motion(self) -> None:
+        html = INDEX_HTML.read_text(encoding="utf-8")
+
+        self.assertIn("const orbitStrength = strength * 0.72;", html)
+        self.assertIn("globalScale: 1.095", html)
+        self.assertIn("depthZoom: orbitStrength * 0.045", html)
+        self.assertIn("depthWeight: 0.82", html)
+        self.assertIn("return Math.max(1.15, Math.min(3.2", html)
 
 
 def read_png_size(path: Path) -> tuple[int, int]:

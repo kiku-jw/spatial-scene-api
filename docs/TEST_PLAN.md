@@ -8,7 +8,7 @@
 ## Rendering Checks
 
 - Generate a deterministic sample image.
-- Render `orbit`, `zoom_in`, and `zoom_out`.
+- Render `orbit`, `zoom_in`, `zoom_out`, and `zoom_in_out`.
 - Confirm MP4 files exist and are non-zero.
 - Confirm ffprobe duration is close to requested duration.
 - Generate benchmark samples with `python scripts/generate_benchmark_samples.py`.
@@ -36,4 +36,4 @@
 - Select `renderer=depthflow`, render a short video, and confirm preview video/download link appear.
 - Open `http://127.0.0.1:8000/outputs/benchmark/gallery.html`.
 - Confirm all benchmark source images and videos load.
-- Open an ML benchmark gallery and confirm original image, depth preview, and three preset videos load for each case.
+- Open an ML benchmark gallery and confirm original image, depth preview, and preset videos load for each case.

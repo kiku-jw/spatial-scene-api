@@ -698,6 +698,7 @@
                   <option value="orbit">orbit</option>
                   <option value="zoom_in">zoom_in</option>
                   <option value="zoom_out">zoom_out</option>
+                  <option value="zoom_in_out">zoom_in_out</option>
                 </select>
               </div>
 
@@ -1624,10 +1625,10 @@
 
       function getTileSize(width, height) {
         const minSide = Math.min(width, height);
-        if (minSide <= 540) return 8;
-        if (minSide <= 720) return 10;
-        if (minSide <= 1080) return 12;
-        return 16;
+        if (minSide <= 540) return 6;
+        if (minSide <= 720) return 8;
+        if (minSide <= 1080) return 10;
+        return 12;
       }
 
       function sampleDepthValue(depth, depthWidth, depthHeight, sceneWidth, sceneHeight, x, y) {
@@ -1711,7 +1712,10 @@
 
         ctx.filter = "none";
         for (const tile of scene.tiles) {
-          const near = tile.depth - 0.42;
+          const depthWeight = typeof motion.depthWeight === "number" ? motion.depthWeight : 1;
+          const depthMin = typeof motion.depthMin === "number" ? motion.depthMin : -0.42;
+          const depthMax = typeof motion.depthMax === "number" ? motion.depthMax : 0.58;
+          const near = clamp((tile.depth - 0.42) * depthWeight, depthMin, depthMax);
           const px = tile.x + tile.width / 2 - scene.width / 2;
           const py = tile.y + tile.height / 2 - scene.height / 2;
           const depthScale = 1 + near * motion.depthZoom;
@@ -1736,7 +1740,7 @@
       }
 
       function getTileOverlap(width, height) {
-        return Math.max(0.7, Math.min(1.4, Math.min(width, height) * 0.08));
+        return Math.max(1.15, Math.min(3.2, Math.min(width, height) * 0.18));
       }
 
       function getVideoBitrate(width, height, fps) {
@@ -1748,7 +1752,9 @@
       function getMotion(progress, strength, preset) {
         const ease = progress * progress * (3 - 2 * progress);
         const loop = Math.sin(progress * Math.PI * 2);
-        const orbitAmount = strength * canvas.width * 0.085;
+        const pingPong = 0.5 - 0.5 * Math.cos(progress * Math.PI * 2);
+        const orbitStrength = strength * 0.72;
+        const orbitAmount = orbitStrength * canvas.width * 0.065;
         const zoomAmount = strength * 0.105;
         if (preset === "zoom_in") {
           return {
@@ -1759,6 +1765,17 @@
             backScale: 1.045 + ease * 0.025,
             globalScale: 1.02 + ease * zoomAmount,
             depthZoom: ease * strength * 0.12
+          };
+        }
+        if (preset === "zoom_in_out") {
+          return {
+            x: strength * canvas.width * 0.014 * loop,
+            y: -strength * canvas.height * 0.008 * loop,
+            backX: -strength * 4 * loop,
+            backY: strength * 2 * loop,
+            backScale: 1.045 + pingPong * 0.025,
+            globalScale: 1.02 + pingPong * zoomAmount,
+            depthZoom: pingPong * strength * 0.12
           };
         }
         if (preset === "zoom_out") {
@@ -1774,12 +1791,15 @@
         }
         return {
           x: loop * orbitAmount,
-          y: Math.sin(progress * Math.PI * 2 + Math.PI / 2) * strength * canvas.height * 0.008,
-          backX: -loop * strength * 10,
+          y: Math.sin(progress * Math.PI * 2 + Math.PI / 2) * orbitStrength * canvas.height * 0.005,
+          backX: -loop * orbitStrength * 8,
           backY: 0,
-          backScale: 1.06,
-          globalScale: 1.045,
-          depthZoom: strength * 0.07 * Math.cos(progress * Math.PI * 2)
+          backScale: 1.115,
+          globalScale: 1.095,
+          depthZoom: orbitStrength * 0.045 * Math.cos(progress * Math.PI * 2),
+          depthWeight: 0.82,
+          depthMin: -0.30,
+          depthMax: 0.36
         };
       }
 

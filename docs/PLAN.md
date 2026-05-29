@@ -9,7 +9,7 @@ Build a local web/API MVP that converts one static image into a deterministic 9:
 - FastAPI backend.
 - Minimal static web UI.
 - Deterministic fallback depth map.
-- Three presets: `orbit`, `zoom_in`, `zoom_out`.
+- Four presets: `orbit`, `zoom_in`, `zoom_out`, `zoom_in_out`.
 - Local `uploads/` and `outputs/` storage.
 - README with run and API examples.
 
@@ -18,7 +18,7 @@ Build a local web/API MVP that converts one static image into a deterministic 9:
 - Server starts locally.
 - UI upload returns an MP4 preview/download link.
 - `/api/render` and `/v1/parallax` both return JSON with `job_id`, `status`, and output URLs.
-- All three presets generate non-empty MP4 files with roughly requested duration.
+- All presets generate non-empty MP4 files with roughly requested duration.
 - No paid or generative video API is required.
 
 ## Verification Commands

@@ -28,7 +28,7 @@ The strongest future direction would be a broader batch video automation workflo
 ## What It Does
 
 - Upload an image in the web UI.
-- Choose `orbit`, `zoom_in`, or `zoom_out`.
+- Choose `orbit`, `zoom_in`, `zoom_out`, or loop-friendly `zoom_in_out`.
 - Render a 9:16 MP4, defaulting to 10 seconds at 30 FPS.
 - Call the same renderer through `/api/render` or `/v1/parallax`.
 - Use the default deterministic fallback depth provider, or opt into an optional Depth Anything backend.
@@ -170,7 +170,7 @@ Generate a deterministic local benchmark pack:
 python scripts/generate_benchmark_samples.py
 ```
 
-Render every benchmark image through all three presets:
+Render every benchmark image through all presets:
 
 ```bash
 python scripts/render_benchmark.py --duration-seconds 1 --fps 6 --depth-provider fallback
@@ -208,7 +208,7 @@ python scripts/render_benchmark.py \
   --strength strong
 ```
 
-That gallery includes original image, ML depth preview, and the three rendered presets. This path uses depth-layer compositing and is much slower than the fallback renderer.
+That gallery includes original image, ML depth preview, and the rendered presets. This path uses depth-layer compositing and is much slower than the fallback renderer.
 
 ## Architecture
 

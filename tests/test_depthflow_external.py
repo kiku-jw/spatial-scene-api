@@ -48,6 +48,21 @@ class DepthFlowExternalTests(unittest.TestCase):
         self.assertIn("horizontal", command)
         self.assertEqual(command.count("--reverse"), 2)
 
+    def test_depthflow_zoom_in_out_command_keeps_looping_motion(self) -> None:
+        settings = build_settings(preset="zoom_in_out", strength="medium")
+
+        command = build_depthflow_command(
+            Path("/tmp/depthflow"),
+            Path("input.png"),
+            Path("output.mp4"),
+            settings,
+        )
+
+        self.assertIn("zoom", command)
+        self.assertIn("horizontal", command)
+        self.assertNotIn("--no-loop", command)
+        self.assertNotIn("--reverse", command)
+
     def test_job_record_includes_renderer(self) -> None:
         store = JobStore()
         record = store.create(

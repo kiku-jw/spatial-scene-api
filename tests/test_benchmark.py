@@ -38,7 +38,7 @@ class BenchmarkTests(unittest.TestCase):
         self.assertEqual(len(plan), len(inputs) * len(PRESETS))
         self.assertEqual({job.preset for job in plan}, set(PRESETS))
         self.assertEqual(plan[0].output_path, Path("outputs/benchmark/portrait/orbit.mp4"))
-        self.assertEqual(plan[-1].output_path, Path("outputs/benchmark/product/zoom_out.mp4"))
+        self.assertEqual(plan[-1].output_path, Path("outputs/benchmark/product/zoom_in_out.mp4"))
 
     def test_build_gallery_html_links_inputs_and_outputs(self) -> None:
         items = [
@@ -50,6 +50,7 @@ class BenchmarkTests(unittest.TestCase):
                     "orbit": Path("outputs/benchmark/portrait/orbit.mp4"),
                     "zoom_in": Path("outputs/benchmark/portrait/zoom_in.mp4"),
                     "zoom_out": Path("outputs/benchmark/portrait/zoom_out.mp4"),
+                    "zoom_in_out": Path("outputs/benchmark/portrait/zoom_in_out.mp4"),
                 },
             )
         ]
@@ -59,8 +60,9 @@ class BenchmarkTests(unittest.TestCase):
         self.assertIn("portrait", html)
         self.assertIn("../../samples/benchmark/portrait.png", html)
         self.assertIn("portrait/depth.png", html)
-        self.assertEqual(html.count("<video"), 3)
+        self.assertEqual(html.count("<video"), 4)
         self.assertIn("portrait/zoom_out.mp4", html)
+        self.assertIn("portrait/zoom_in_out.mp4", html)
 
 
 if __name__ == "__main__":

@@ -29,3 +29,5 @@
 - Browser-verified `outputs/depthflow_spike/full_10s/gallery.html`: 3 source images, 9 videos, all metadata-loaded at 720x1280 and 10 seconds.
 - ffprobe-confirmed all DepthFlow spike videos in `outputs/depthflow_spike/full_10s` are 720x1280, 30 FPS, 300 frames, and 10 seconds.
 - Added a browser-only GitHub Pages demo in `docs/index.html`; it renders locally with Canvas and MediaRecorder on the visitor's device.
+- Added `zoom_in_out`, a loop-friendly zoom preset that eases in and back out so rendered preview loops do not jump at the seam.
+- Tuned `orbit` with extra overscan and softer depth displacement to reduce corner exposure and tile-edge trails at higher strength values.

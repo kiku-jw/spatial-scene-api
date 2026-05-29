@@ -11,7 +11,7 @@ from PIL import Image, ImageEnhance, ImageFilter, ImageOps, UnidentifiedImageErr
 from app.depth import DepthProvider, create_depth_provider
 
 
-ALLOWED_PRESETS = {"orbit", "zoom_in", "zoom_out"}
+ALLOWED_PRESETS = {"orbit", "zoom_in", "zoom_out", "zoom_in_out"}
 DEFAULT_OUTPUT_HEIGHT = 1280
 
 
@@ -366,10 +366,11 @@ def _source_coordinates(
     if settings.preset == "orbit":
         phase = math.sin((frame_index / max(1, frame_count)) * math.tau)
         lift = math.cos((frame_index / max(1, frame_count)) * math.tau)
-        zoom = 1.075 + (1.0 - lift) * 0.008
-        shift_x = depth_signed * phase * width * 0.046 * strength
-        shift_y = depth_signed * -phase * height * 0.006 * strength
-        pan_x = phase * width * 0.010 * strength
+        orbit_strength = strength * 0.72
+        zoom = 1.125 + (1.0 - lift) * 0.006
+        shift_x = depth_signed * phase * width * 0.040 * orbit_strength
+        shift_y = depth_signed * -phase * height * 0.0045 * orbit_strength
+        pan_x = phase * width * 0.008 * orbit_strength
     elif settings.preset == "zoom_in":
         eased = _smoothstep(progress)
         zoom = 1.025 + eased * 0.105
@@ -377,6 +378,15 @@ def _source_coordinates(
         shift_x = (centered_x / max(1.0, center_x)) * depth_signed * radial_strength
         shift_y = (centered_y / max(1.0, center_y)) * depth_signed * radial_strength
         pan_y = -eased * height * 0.004 * strength
+    elif settings.preset == "zoom_in_out":
+        cycle = 0.5 - 0.5 * math.cos(progress * math.tau)
+        sway = math.sin(progress * math.tau)
+        zoom = 1.025 + cycle * 0.105
+        radial_strength = (0.2 + cycle * 0.8) * width * 0.010 * strength
+        shift_x = (centered_x / max(1.0, center_x)) * depth_signed * radial_strength
+        shift_y = (centered_y / max(1.0, center_y)) * depth_signed * radial_strength
+        pan_x = sway * width * 0.004 * strength
+        pan_y = -sway * height * 0.003 * strength
     elif settings.preset == "zoom_out":
         eased = _smoothstep(progress)
         zoom = 1.13 - eased * 0.105

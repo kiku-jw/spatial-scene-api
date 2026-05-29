@@ -12,6 +12,11 @@ class DepthProviderTests(unittest.TestCase):
 
         self.assertEqual(settings.depth_provider, "depth_anything")
 
+    def test_build_settings_accepts_loopable_zoom_preset(self) -> None:
+        settings = build_settings(preset="zoom_in_out")
+
+        self.assertEqual(settings.preset, "zoom_in_out")
+
     def test_depth_provider_factory_uses_fallback_by_default(self) -> None:
         provider = create_depth_provider("fallback")
 
