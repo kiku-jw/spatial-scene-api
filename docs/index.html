@@ -77,8 +77,8 @@
 
       .workspace {
         display: grid;
-        grid-template-columns: 342px minmax(0, 1fr);
-        gap: 18px;
+        grid-template-columns: minmax(0, 1fr) 380px;
+        gap: 20px;
         align-items: start;
       }
 
@@ -90,9 +90,18 @@
       }
 
       .controls {
-        padding: 16px;
         position: sticky;
         top: 16px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .control-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        padding: 16px;
       }
 
       label {
@@ -122,23 +131,77 @@
         padding: 10px 11px;
       }
 
-      input[type="file"] {
-        color: var(--muted);
+      input[type="file"].file-input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        opacity: 0;
       }
 
-      input[type="file"]::file-selector-button {
-        border: 1px solid var(--line-strong);
-        border-radius: 6px;
+      .big-control {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        gap: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
         background: var(--panel-soft);
         color: var(--text);
-        padding: 7px 10px;
-        margin-right: 10px;
+        min-height: 58px;
+        padding: 10px 12px;
+        text-align: left;
+        text-transform: none;
+        font-size: 15px;
         cursor: pointer;
-        font-weight: 700;
+        margin-bottom: 0;
+        transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
       }
 
-      input[type="file"]::file-selector-button:hover {
+      .big-control:hover {
         border-color: var(--accent);
+        transform: translateY(-1px);
+      }
+
+      .big-control.depth {
+        border-color: rgba(101, 199, 163, 0.34);
+        background: rgba(101, 199, 163, 0.07);
+      }
+
+      .button-icon {
+        display: grid;
+        flex: 0 0 auto;
+        width: 36px;
+        height: 36px;
+        place-items: center;
+        border-radius: 8px;
+        background: rgba(243, 239, 229, 0.08);
+        color: var(--accent);
+      }
+
+      .button-copy {
+        display: grid;
+        gap: 2px;
+      }
+
+      .button-copy strong {
+        font-size: 14px;
+        line-height: 1.2;
+      }
+
+      .button-copy span {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.2;
+      }
+
+      .control-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
       }
 
       select:focus,
@@ -148,12 +211,46 @@
       }
 
       input[type="range"] {
+        --strength-fill: 62%;
         width: 100%;
-        accent-color: var(--accent);
+        height: 8px;
+        appearance: none;
+        border-radius: 8px;
+        background: linear-gradient(90deg, var(--accent) 0%, var(--accent) var(--strength-fill), rgba(243, 239, 229, 0.15) var(--strength-fill), rgba(243, 239, 229, 0.15) 100%);
+        cursor: pointer;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        width: 24px;
+        height: 24px;
+        appearance: none;
+        border: 2px solid #f1db9a;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+        transition: transform 150ms ease, box-shadow 150ms ease;
+      }
+
+      input[type="range"]::-webkit-slider-thumb:hover {
+        transform: scale(1.08);
+        box-shadow: 0 8px 24px rgba(213, 184, 106, 0.28);
+      }
+
+      input[type="range"]::-moz-range-thumb {
+        width: 24px;
+        height: 24px;
+        border: 2px solid #f1db9a;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
       }
 
       .field {
         margin-bottom: 14px;
+      }
+
+      .field:last-child {
+        margin-bottom: 0;
       }
 
       .field button {
@@ -235,6 +332,7 @@
         color: var(--muted);
         font-size: 13px;
         line-height: 1.45;
+        text-align: center;
       }
 
       .status.error {
@@ -244,8 +342,9 @@
       .progress {
         overflow: hidden;
         width: 100%;
+        max-width: 640px;
         height: 7px;
-        margin-top: 11px;
+        margin-top: 0;
         border-radius: 8px;
         background: rgba(243, 239, 229, 0.1);
       }
@@ -259,18 +358,22 @@
       }
 
       .stage {
-        display: grid;
-        grid-template-columns: minmax(280px, 1fr) 280px;
-        gap: 18px;
+        display: flex;
+        flex-direction: column;
         align-items: center;
-        min-height: 620px;
+        justify-content: center;
+        gap: 16px;
+        min-height: 600px;
         height: calc(100vh - 116px);
         max-height: 840px;
-        padding: 18px;
+        padding: 24px;
       }
 
       .canvas-wrap {
+        --preview-max-width: 420px;
+        --preview-ratio: 0.5625;
         position: relative;
+        flex: 0 0 auto;
         overflow: hidden;
         border-radius: 8px;
         border: 1px solid rgba(243, 239, 229, 0.18);
@@ -278,10 +381,29 @@
         box-shadow:
           0 34px 90px rgba(0, 0, 0, 0.56),
           0 0 0 8px rgba(243, 239, 229, 0.035);
-        justify-self: center;
-        width: min(100%, 420px, 40vh);
-        max-width: 100%;
+        width: min(100%, var(--preview-max-width), calc((100vh - 260px) * var(--preview-ratio)));
         aspect-ratio: 9 / 16;
+        transition: width 260ms ease, box-shadow 180ms ease, border-color 180ms ease;
+      }
+
+      .canvas-wrap[data-orientation="square"] {
+        --preview-max-width: 560px;
+      }
+
+      .canvas-wrap[data-orientation="landscape"] {
+        --preview-max-width: 780px;
+      }
+
+      .canvas-wrap[data-orientation="portrait"] {
+        --preview-max-width: 420px;
+      }
+
+      .canvas-wrap.is-dragging {
+        border-color: var(--accent);
+        box-shadow:
+          0 34px 90px rgba(0, 0, 0, 0.56),
+          0 0 0 8px rgba(213, 184, 106, 0.08),
+          0 0 48px rgba(213, 184, 106, 0.18);
       }
 
       .canvas-wrap::before {
@@ -335,13 +457,27 @@
       .empty {
         position: absolute;
         inset: 0;
-        display: grid;
-        place-items: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
         padding: 20px;
         color: var(--muted);
         text-align: center;
         font-size: 14px;
         background: #050604;
+      }
+
+      .empty-icon {
+        display: grid;
+        width: 64px;
+        height: 64px;
+        place-items: center;
+        border: 1px dashed var(--line-strong);
+        border-radius: 8px;
+        color: var(--accent);
+        background: rgba(243, 239, 229, 0.04);
       }
 
       .details {
@@ -366,25 +502,28 @@
       }
 
       .facts {
-        display: grid;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
         gap: 8px;
-        margin-top: 14px;
       }
 
       .fact {
-        display: grid;
-        grid-template-columns: 86px minmax(0, 1fr);
-        gap: 12px;
-        border-bottom: 1px solid rgba(243, 239, 229, 0.09);
-        padding-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        border: 1px solid rgba(243, 239, 229, 0.09);
+        border-radius: 8px;
+        background: rgba(243, 239, 229, 0.04);
+        padding: 7px 9px;
         color: var(--muted);
-        font-size: 13px;
+        font-size: 12px;
       }
 
       .fact strong {
         color: var(--text);
         font-weight: 700;
-        text-align: right;
+        text-align: left;
         overflow-wrap: anywhere;
       }
 
@@ -401,13 +540,11 @@
 
       @media (max-width: 1080px) {
         .workspace {
-          grid-template-columns: 318px minmax(0, 1fr);
+          grid-template-columns: minmax(0, 1fr) 340px;
         }
 
         .stage {
-          grid-template-columns: minmax(260px, 1fr);
-          height: auto;
-          max-height: none;
+          min-height: 560px;
         }
 
         .details {
@@ -437,7 +574,7 @@
         }
 
         .controls {
-          margin-bottom: 14px;
+          margin-top: 14px;
         }
 
         .details {
@@ -446,9 +583,15 @@
 
         .canvas-wrap {
           width: min(100%, 380px);
-          height: auto;
-          min-height: 0;
           margin: 0 auto;
+        }
+
+        .canvas-wrap[data-orientation="square"] {
+          width: min(100%, 420px);
+        }
+
+        .canvas-wrap[data-orientation="landscape"] {
+          width: min(100%, 620px);
         }
       }
 
@@ -468,98 +611,133 @@
     <main>
       <header>
         <div>
-          <h1>Spatial Scene Browser Demo</h1>
-          <p class="subhead">Client-side parallax animation. Your image stays in this browser.</p>
+          <h1>Spatial Scene</h1>
+          <p class="subhead">Local image-to-parallax studio. No upload, no generative video.</p>
         </div>
         <div class="badge">No upload · no server render</div>
       </header>
 
       <div class="workspace">
-        <section class="panel controls" aria-label="Render controls">
-          <div class="field">
-            <label for="imageInput">Image</label>
-            <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp">
-          </div>
-
-          <div class="field">
-            <button class="secondary" id="demoButton" type="button">Load Demo Image</button>
-          </div>
-
-          <div class="field">
-            <button class="secondary" id="mlDepthButton" type="button">Experimental ML Depth</button>
-          </div>
-
-          <div class="grid">
-            <div class="field">
-              <label for="preset">Preset</label>
-              <select id="preset">
-                <option value="orbit">orbit</option>
-                <option value="zoom_in">zoom_in</option>
-                <option value="zoom_out">zoom_out</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="resolution">Resolution</label>
-              <select id="resolution">
-                <option value="360x640">360x640</option>
-                <option value="540x960" selected>540x960</option>
-                <option value="720x1280">720x1280</option>
-              </select>
+        <section class="panel stage" aria-label="Preview">
+          <div class="canvas-wrap" id="canvasWrap" data-orientation="portrait">
+            <canvas id="canvas" width="540" height="960"></canvas>
+            <video id="video" controls playsinline></video>
+            <div class="empty" id="emptyState">
+              <span class="empty-icon" aria-hidden="true">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </span>
+              <span>Drop or upload an image</span>
             </div>
           </div>
 
-          <div class="grid">
+          <div class="status" id="status">Load an image or use the demo image.</div>
+          <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+          <div class="facts">
+            <div class="fact"><span>Renderer</span><strong>Canvas mesh warp</strong></div>
+            <div class="fact"><span>Depth</span><strong id="depthFact">Heuristic local map</strong></div>
+            <div class="fact"><span>Aspect</span><strong id="aspectFact">9:16</strong></div>
+            <div class="fact"><span>Privacy</span><strong>Local only</strong></div>
+            <div class="fact"><span>Output</span><strong id="formatFact">Detecting...</strong></div>
+          </div>
+        </section>
+
+        <section class="controls" aria-label="Render controls">
+          <div class="control-card">
+            <input class="file-input" id="imageInput" type="file" accept="image/png,image/jpeg,image/webp">
+            <label class="big-control" for="imageInput">
+              <span class="button-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 16V4m0 0 4 4m-4-4-4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <span class="button-copy">
+                <strong>Upload Image</strong>
+                <span>PNG, JPG, WebP</span>
+              </span>
+            </label>
+          </div>
+
+          <div class="control-card">
             <div class="field">
-              <label for="duration">Duration</label>
-              <input id="duration" type="number" min="1" max="10" step="1" value="5">
+              <button class="big-control" id="demoButton" type="button">
+                <span class="button-icon" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path d="m12 3 1.6 5 5.4.1-4.3 3.2 1.6 5-4.3-3.1-4.3 3.1 1.6-5L5 8.1 10.4 8 12 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+                <span class="button-copy">
+                  <strong>Load Demo Image</strong>
+                  <span>Try the local renderer</span>
+                </span>
+              </button>
             </div>
 
             <div class="field">
-              <label for="fps">FPS</label>
-              <input id="fps" type="number" min="8" max="30" step="1" value="24">
+              <button class="big-control depth" id="mlDepthButton" type="button">
+                <span class="button-icon" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path d="m12 4 8 4-8 4-8-4 8-4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                    <path d="m4 12 8 4 8-4M4 16l8 4 8-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+                <span class="button-copy">
+                  <strong id="mlDepthLabel">Experimental ML Depth</strong>
+                  <span>Browser inference</span>
+                </span>
+              </button>
             </div>
           </div>
 
-          <div class="field">
-            <label for="strength">Strength</label>
-            <div class="range-row">
+          <div class="control-card">
+            <div class="grid">
+              <div class="field">
+                <label for="preset">Preset</label>
+                <select id="preset">
+                  <option value="orbit">orbit</option>
+                  <option value="zoom_in">zoom_in</option>
+                  <option value="zoom_out">zoom_out</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="resolution">Resolution</label>
+                <select id="resolution">
+                  <option value="360x640">360x640</option>
+                  <option value="540x960" selected>540x960</option>
+                  <option value="720x1280">720x1280</option>
+                  <option value="1080x1080">1080x1080</option>
+                  <option value="1080x1350">1080x1350</option>
+                  <option value="1920x1080">1920x1080</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid">
+              <div class="field">
+                <label for="duration">Duration</label>
+                <input id="duration" type="number" min="1" max="10" step="1" value="5">
+              </div>
+
+              <div class="field">
+                <label for="fps">FPS</label>
+                <input id="fps" type="number" min="8" max="30" step="1" value="24">
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="control-title">
+                <label for="strength">Strength</label>
+                <div class="value" id="strengthValue">62</div>
+              </div>
               <input id="strength" type="range" min="0" max="100" value="62">
-              <div class="value" id="strengthValue">62</div>
             </div>
           </div>
 
           <div class="actions">
             <button class="primary" id="renderButton" type="button">Render</button>
             <a class="download" id="downloadLink" href="#" download aria-disabled="true">Download</a>
-          </div>
-
-          <div class="status" id="status">Load an image or use the demo image.</div>
-          <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
-        </section>
-
-        <section class="panel stage" aria-label="Preview">
-          <div class="canvas-wrap">
-            <canvas id="canvas" width="540" height="960"></canvas>
-            <video id="video" controls playsinline></video>
-            <div class="empty" id="emptyState">Preview appears here</div>
-          </div>
-
-          <div class="details">
-            <h2>Studio run</h2>
-            <p>
-              Browser-only parallax rendering. No upload, no generative video, no rewritten image content.
-            </p>
-            <p>
-              Experimental ML depth runs locally and can take a moment on first launch.
-            </p>
-            <div class="facts">
-              <div class="fact"><span>Renderer</span><strong>Canvas mesh warp</strong></div>
-              <div class="fact"><span>Depth</span><strong id="depthFact">Heuristic local map</strong></div>
-              <div class="fact"><span>Aspect</span><strong>9:16</strong></div>
-              <div class="fact"><span>Privacy</span><strong>Local browser only</strong></div>
-              <div class="fact"><span>Output</span><strong id="formatFact">Detecting...</strong></div>
-            </div>
           </div>
         </section>
       </div>
@@ -576,14 +754,17 @@
       const strengthValue = document.getElementById("strengthValue");
       const renderButton = document.getElementById("renderButton");
       const mlDepthButton = document.getElementById("mlDepthButton");
+      const mlDepthLabel = document.getElementById("mlDepthLabel");
       const downloadLink = document.getElementById("downloadLink");
       const statusNode = document.getElementById("status");
       const progressBar = document.getElementById("progressBar");
       const canvas = document.getElementById("canvas");
+      const canvasWrap = document.getElementById("canvasWrap");
       const video = document.getElementById("video");
       const emptyState = document.getElementById("emptyState");
       const formatFact = document.getElementById("formatFact");
       const depthFact = document.getElementById("depthFact");
+      const aspectFact = document.getElementById("aspectFact");
       const ctx = canvas.getContext("2d", { alpha: false });
 
       const TRANSFORMERS_URL = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0/+esm";
@@ -591,8 +772,7 @@
         "onnx-community/depth-anything-v2-small",
         "Xenova/depth-anything-small-hf"
       ];
-      const DEPTH_WIDTH = 72;
-      const DEPTH_HEIGHT = 128;
+      const DEPTH_BASE_SIZE = 128;
 
       const MIME_CANDIDATES = [
         "video/mp4;codecs=avc1.42E01E",
@@ -613,12 +793,34 @@
 
       updateFormatFact();
       updateStrengthLabel();
+      updatePreviewAspect();
       updateDepthUi();
       renderPlaceholder();
 
       imageInput.addEventListener("change", async () => {
         const file = imageInput.files[0];
         if (!file) return;
+        await handleImageFile(file, file.name);
+      });
+
+      canvasWrap.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        canvasWrap.classList.add("is-dragging");
+      });
+
+      canvasWrap.addEventListener("dragleave", () => {
+        canvasWrap.classList.remove("is-dragging");
+      });
+
+      canvasWrap.addEventListener("drop", async (event) => {
+        event.preventDefault();
+        canvasWrap.classList.remove("is-dragging");
+        const file = event.dataTransfer.files[0];
+        if (!file) return;
+        await handleImageFile(file, file.name);
+      });
+
+      async function handleImageFile(file, label) {
         try {
           setStatus("Loading image...");
           sourceImage = await loadImageFromFile(file);
@@ -629,11 +831,11 @@
           canvas.style.display = "block";
           emptyState.style.display = "none";
           drawStill();
-          setStatus(`${file.name} loaded. Ready to render.`);
+          setStatus(`${label} loaded. Ready to render.`);
         } catch (error) {
           setError(error.message);
         }
-      });
+      }
 
       demoButton.addEventListener("click", async () => {
         sourceImage = await createDemoImage();
@@ -651,7 +853,9 @@
       resolutionInput.addEventListener("change", () => {
         prepared = null;
         resetDepthMode();
+        updatePreviewAspect();
         if (sourceImage) drawStill();
+        if (!sourceImage) renderPlaceholder();
       });
 
       strengthInput.addEventListener("input", () => {
@@ -720,8 +924,9 @@
 
         try {
           const baseScene = prepareBaseScene();
+          const depthSize = getDepthSize(baseScene.width, baseScene.height);
           setStatus("Loading experimental ML depth model...");
-          const depthMap = await buildMlDepthMap(baseScene.base, DEPTH_WIDTH, DEPTH_HEIGHT);
+          const depthMap = await buildMlDepthMap(baseScene.base, depthSize.width, depthSize.height);
           mlDepthMap = {
             key: getSceneKey(),
             width: depthMap.width,
@@ -788,12 +993,13 @@
 
       function updateStrengthLabel() {
         strengthValue.textContent = strengthInput.value;
+        strengthInput.style.setProperty("--strength-fill", `${strengthInput.value}%`);
       }
 
       function updateDepthUi() {
         const label = depthMode === "ml" && mlDepthMap ? mlDepthMap.label : "Heuristic local map";
         depthFact.textContent = label;
-        mlDepthButton.textContent = depthMode === "ml" && mlDepthMap ? "ML Depth Active" : "Experimental ML Depth";
+        mlDepthLabel.textContent = depthMode === "ml" && mlDepthMap ? "ML Depth Active" : "Experimental ML Depth";
         mlDepthButton.disabled = !sourceImage;
       }
 
@@ -823,6 +1029,48 @@
       function parseResolution() {
         const [width, height] = resolutionInput.value.split("x").map((value) => Number(value));
         return { width, height };
+      }
+
+      function updatePreviewAspect() {
+        const { width, height } = parseResolution();
+        canvasWrap.style.aspectRatio = `${width} / ${height}`;
+        canvasWrap.style.setProperty("--preview-ratio", String(width / height));
+        canvasWrap.dataset.orientation = getOrientation(width, height);
+        aspectFact.textContent = getAspectLabel(width, height);
+      }
+
+      function getOrientation(width, height) {
+        if (width === height) return "square";
+        return width > height ? "landscape" : "portrait";
+      }
+
+      function getAspectLabel(width, height) {
+        const divisor = greatestCommonDivisor(width, height);
+        return `${width / divisor}:${height / divisor}`;
+      }
+
+      function greatestCommonDivisor(first, second) {
+        let a = Math.abs(first);
+        let b = Math.abs(second);
+        while (b) {
+          const next = b;
+          b = a % b;
+          a = next;
+        }
+        return a || 1;
+      }
+
+      function getDepthSize(width, height) {
+        if (width >= height) {
+          return {
+            width: DEPTH_BASE_SIZE,
+            height: Math.max(48, Math.round(DEPTH_BASE_SIZE * height / width))
+          };
+        }
+        return {
+          width: Math.max(48, Math.round(DEPTH_BASE_SIZE * width / height)),
+          height: DEPTH_BASE_SIZE
+        };
       }
 
       function getSceneKey() {
@@ -898,6 +1146,7 @@
 
       function prepareBaseScene() {
         const { width, height } = parseResolution();
+        updatePreviewAspect();
         canvas.width = width;
         canvas.height = height;
 
@@ -926,11 +1175,12 @@
         if (depthMode === "ml" && mlDepthMap && mlDepthMap.key === getSceneKey()) {
           return mlDepthMap;
         }
-        const depth = buildDepthMap(base, DEPTH_WIDTH, DEPTH_HEIGHT);
+        const depthSize = getDepthSize(base.width, base.height);
+        const depth = buildDepthMap(base, depthSize.width, depthSize.height);
         return {
           key: getSceneKey(),
-          width: DEPTH_WIDTH,
-          height: DEPTH_HEIGHT,
+          width: depthSize.width,
+          height: depthSize.height,
           data: depth,
           label: "Heuristic local map"
         };
@@ -948,6 +1198,7 @@
 
       function renderPlaceholder() {
         const { width, height } = parseResolution();
+        updatePreviewAspect();
         canvas.width = width;
         canvas.height = height;
         ctx.fillStyle = "#24241f";
@@ -1144,8 +1395,15 @@
 
       function createDepthInput(base) {
         const input = document.createElement("canvas");
-        input.width = 378;
-        input.height = 672;
+        const maxSide = 672;
+        const ratio = base.width / base.height;
+        if (ratio >= 1) {
+          input.width = maxSide;
+          input.height = Math.max(224, Math.round(maxSide / ratio));
+        } else {
+          input.height = maxSide;
+          input.width = Math.max(224, Math.round(maxSide * ratio));
+        }
         const inputCtx = input.getContext("2d", { alpha: false });
         inputCtx.drawImage(base, 0, 0, input.width, input.height);
         return input.toDataURL("image/jpeg", 0.9);
