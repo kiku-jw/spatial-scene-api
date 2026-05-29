@@ -722,7 +722,7 @@
 
               <div class="field">
                 <label for="fps">FPS</label>
-                <input id="fps" type="number" min="8" max="30" step="1" value="24">
+                <input id="fps" type="number" min="8" max="30" step="1" value="30">
               </div>
             </div>
 
@@ -1646,7 +1646,7 @@
 
       function recordAnimation(mimeType) {
         return new Promise((resolve, reject) => {
-          const fps = clamp(Number(fpsInput.value) || 24, 8, 30);
+          const fps = clamp(Number(fpsInput.value) || 30, 8, 30);
           const durationSeconds = clamp(Number(durationInput.value) || 5, 1, 10);
           renderFrame(0);
           const stream = canvas.captureStream(fps);

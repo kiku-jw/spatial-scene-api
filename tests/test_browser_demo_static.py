@@ -41,6 +41,8 @@ class BrowserDemoStaticTests(unittest.TestCase):
         html = INDEX_HTML.read_text(encoding="utf-8")
 
         self.assertIn('<option value="1920x1080" selected>', html)
+        self.assertIn('<input id="fps" type="number" min="8" max="30" step="1" value="30">', html)
+        self.assertIn("const fps = clamp(Number(fpsInput.value) || 30, 8, 30);", html)
         self.assertIn("const DEPTH_BASE_SIZE = 256", html)
         self.assertIn("function getTileSize", html)
         self.assertIn("function getVideoBitrate", html)
