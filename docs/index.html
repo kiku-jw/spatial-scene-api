@@ -621,7 +621,7 @@
         <section class="panel stage" aria-label="Preview">
           <div class="canvas-wrap" id="canvasWrap" data-orientation="portrait">
             <canvas id="canvas" width="540" height="960"></canvas>
-            <video id="video" controls playsinline loop></video>
+            <video id="video" controls playsinline autoplay muted loop></video>
             <div class="empty" id="emptyState">
               <span class="empty-icon" aria-hidden="true">
                 <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
@@ -904,9 +904,9 @@
 
           setVideoPosterFromCanvas();
           video.src = url;
-          primeVideoPreview();
           video.style.display = "block";
           canvas.style.display = "none";
+          primeVideoPreview();
           downloadLink.href = url;
           downloadLink.download = `spatial-scene-${presetInput.value}.${extension}`;
           downloadLink.removeAttribute("aria-disabled");
@@ -955,14 +955,25 @@
       }
 
       function primeVideoPreview() {
-        const seekPreviewFrame = () => {
+        video.autoplay = true;
+        video.loop = true;
+        video.muted = true;
+        const startPreviewLoop = () => {
           if (!Number.isFinite(video.duration) || video.duration <= 0) return;
-          video.currentTime = Math.min(0.12, Math.max(0.01, video.duration * 0.08));
+          video.currentTime = 0;
+          playRenderedPreview();
         };
         if (video.readyState >= 1) {
-          seekPreviewFrame();
+          startPreviewLoop();
         } else {
-          video.addEventListener("loadedmetadata", seekPreviewFrame, { once: true });
+          video.addEventListener("loadedmetadata", startPreviewLoop, { once: true });
+        }
+      }
+
+      function playRenderedPreview() {
+        const playPromise = video.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.catch(() => {});
         }
       }
 

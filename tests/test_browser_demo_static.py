@@ -26,7 +26,9 @@ class BrowserDemoStaticTests(unittest.TestCase):
     def test_rendered_preview_video_loops(self) -> None:
         html = INDEX_HTML.read_text(encoding="utf-8")
 
-        self.assertIn('<video id="video" controls playsinline loop>', html)
+        self.assertIn('<video id="video" controls playsinline autoplay muted loop>', html)
+        self.assertIn("playRenderedPreview", html)
+        self.assertIn("video.play()", html)
 
     def test_ml_depth_is_prepared_by_default_with_honest_fallback(self) -> None:
         html = INDEX_HTML.read_text(encoding="utf-8")
