@@ -4,6 +4,16 @@
 
 Local MVP for turning a single PNG/JPG/WebP image into a short deterministic MP4 with depth-style parallax. It does not call generative image-to-video models and does not rewrite image content.
 
+## Browser Demo
+
+Try the client-side demo:
+
+```text
+https://kiku-jw.github.io/spatial-scene-api/
+```
+
+The browser demo is static GitHub Pages. It does not upload images or use the FastAPI backend. Rendering runs on the visitor's device with Canvas and the browser video encoder. Depending on browser support, the download may be MP4 or WebM.
+
 ## Why This Is Parked
 
 The prototype works, but the standalone SaaS opportunity is weak without stronger validation:
@@ -13,7 +23,7 @@ The prototype works, but the standalone SaaS opportunity is weak without stronge
 - Better local output currently depends on DepthFlow, which is AGPL-3.0 and not suitable as-is for a closed commercial API.
 - A commercial version would need either a clean-room renderer or a properly licensed rendering stack, plus clear unit economics for GPU/server cost.
 
-The strongest future direction would be a broader batch video automation workflow, not a narrow parallax-only API.
+The strongest future direction would be a broader batch video automation workflow, not a narrow parallax-only API. The public browser demo keeps the project useful as a portfolio artifact without requiring server infrastructure.
 
 ## What It Does
 
@@ -208,6 +218,7 @@ That gallery includes original image, ML depth preview, and the three rendered p
 - `app/depth.py` - swappable depth provider interface, fallback heuristic provider, optional Depth Anything provider.
 - `app/jobs.py` - in-memory local job tracking.
 - `app/static/index.html` - compact upload UI.
+- `docs/index.html` - GitHub Pages browser-only demo.
 - `app/benchmark.py` - benchmark planning, rendering, manifest, and gallery helpers.
 - `scripts/generate_benchmark_samples.py` - deterministic sample image pack.
 - `scripts/render_benchmark.py` - local benchmark runner.
@@ -220,6 +231,8 @@ That gallery includes original image, ML depth preview, and the three rendered p
 - A 10-second 720x1280 render can take tens of seconds on a local CPU.
 - ML-depth layered rendering is more spatial, but much slower than fallback and can introduce edge halos around depth boundaries.
 - DepthFlow output is much better and faster locally, but DepthFlow and ShaderFlow are AGPL-3.0. Treat this path as an isolated local spike until licensing is resolved.
+- The GitHub Pages browser demo uses a lighter heuristic Canvas renderer. It is zero-infrastructure, but lower quality than the FastAPI/DepthFlow paths.
+- Browser demo export depends on browser encoder support, so output can be MP4 or WebM.
 - No auth, billing, queues, webhooks, batch mode, or cloud deployment.
 - Output resolution is currently tied to aspect ratio with 9:16 rendering at 720x1280.
 - Wide or unusual source images are preserved with a blurred fill background to avoid black borders.
@@ -251,6 +264,7 @@ Verified on 2026-05-28 and 2026-05-29:
 - ffprobe confirmed generated smoke MP4s at 720x1280 with requested duration/FPS
 - Benchmark gallery generated and browser-checked with 8 source images and 24 MP4s
 - User-art ML layered benchmark browser-checked with 13 source images, 13 depth maps, and 39 MP4s
+- GitHub Pages browser demo locally checked with client-side render and downloadable video output
 
 ## Next Best Step
 

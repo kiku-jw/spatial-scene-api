@@ -1,0 +1,956 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Client-side browser demo for deterministic image-to-parallax video rendering.">
+    <link rel="icon" href="data:,">
+    <title>Spatial Scene Browser Demo</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f5f2;
+        --panel: #ffffff;
+        --text: #171717;
+        --muted: #666a61;
+        --line: #d8d8d0;
+        --accent: #1f7a5a;
+        --accent-dark: #145d43;
+        --danger: #a23b2a;
+        --shadow: 0 18px 50px rgba(30, 28, 22, 0.11);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      main {
+        width: min(1180px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 22px 0 32px;
+      }
+
+      header {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      h1 {
+        margin: 0 0 5px;
+        font-size: 26px;
+        line-height: 1.1;
+        letter-spacing: 0;
+      }
+
+      .subhead {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      .badge {
+        flex: 0 0 auto;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 7px 11px;
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.62);
+        font-size: 13px;
+        white-space: nowrap;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: 360px minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+      }
+
+      .controls {
+        padding: 16px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 7px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      input,
+      select,
+      button {
+        font: inherit;
+      }
+
+      input[type="file"],
+      select,
+      input[type="number"] {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fbfbf8;
+        color: var(--text);
+        padding: 10px 11px;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: var(--accent);
+      }
+
+      .field {
+        margin-bottom: 14px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .range-row {
+        display: grid;
+        grid-template-columns: 1fr 44px;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .value {
+        color: var(--muted);
+        font-size: 13px;
+        text-align: right;
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      button,
+      .download {
+        min-height: 42px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        padding: 10px 12px;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+        font-weight: 700;
+      }
+
+      button.primary {
+        background: var(--accent);
+        color: white;
+      }
+
+      button.primary:hover {
+        background: var(--accent-dark);
+      }
+
+      button.secondary,
+      .download {
+        background: #f4f4ef;
+        border-color: var(--line);
+        color: var(--text);
+      }
+
+      button:disabled,
+      .download[aria-disabled="true"] {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .status {
+        min-height: 24px;
+        margin-top: 13px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .status.error {
+        color: var(--danger);
+      }
+
+      .progress {
+        overflow: hidden;
+        width: 100%;
+        height: 7px;
+        margin-top: 11px;
+        border-radius: 99px;
+        background: #ededdf;
+      }
+
+      .progress span {
+        display: block;
+        width: 0%;
+        height: 100%;
+        background: var(--accent);
+        transition: width 120ms linear;
+      }
+
+      .stage {
+        display: grid;
+        grid-template-columns: minmax(260px, 52vh) minmax(0, 1fr);
+        gap: 16px;
+        padding: 16px;
+      }
+
+      .canvas-wrap {
+        position: relative;
+        overflow: hidden;
+        border-radius: 8px;
+        background: #222;
+        aspect-ratio: 9 / 16;
+      }
+
+      canvas,
+      video {
+        display: block;
+        width: 100%;
+        height: 100%;
+        background: #202020;
+      }
+
+      video {
+        display: none;
+        object-fit: contain;
+      }
+
+      .empty {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+        color: #d9d9d0;
+        text-align: center;
+        font-size: 14px;
+        background: #24241f;
+      }
+
+      .details {
+        min-width: 0;
+      }
+
+      .details h2 {
+        margin: 0 0 9px;
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+
+      .details p {
+        margin: 0 0 12px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      .facts {
+        display: grid;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .fact {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid #ecece4;
+        padding-bottom: 8px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .fact strong {
+        color: var(--text);
+        font-weight: 700;
+        text-align: right;
+      }
+
+      @media (max-width: 880px) {
+        main {
+          width: min(100vw - 22px, 680px);
+          padding-top: 14px;
+        }
+
+        header,
+        .workspace,
+        .stage {
+          display: block;
+        }
+
+        .badge {
+          display: inline-block;
+          margin-top: 10px;
+        }
+
+        .controls {
+          margin-bottom: 14px;
+        }
+
+        .details {
+          margin-top: 15px;
+        }
+      }
+
+      @media (max-width: 460px) {
+        .grid,
+        .actions {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 23px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>Spatial Scene Browser Demo</h1>
+          <p class="subhead">Client-side parallax animation. Your image stays in this browser.</p>
+        </div>
+        <div class="badge">No upload · no server render</div>
+      </header>
+
+      <div class="workspace">
+        <section class="panel controls" aria-label="Render controls">
+          <div class="field">
+            <label for="imageInput">Image</label>
+            <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp">
+          </div>
+
+          <div class="field">
+            <button class="secondary" id="demoButton" type="button">Load Demo Image</button>
+          </div>
+
+          <div class="grid">
+            <div class="field">
+              <label for="preset">Preset</label>
+              <select id="preset">
+                <option value="orbit">orbit</option>
+                <option value="zoom_in">zoom_in</option>
+                <option value="zoom_out">zoom_out</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="resolution">Resolution</label>
+              <select id="resolution">
+                <option value="360x640">360x640</option>
+                <option value="540x960" selected>540x960</option>
+                <option value="720x1280">720x1280</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid">
+            <div class="field">
+              <label for="duration">Duration</label>
+              <input id="duration" type="number" min="1" max="10" step="1" value="5">
+            </div>
+
+            <div class="field">
+              <label for="fps">FPS</label>
+              <input id="fps" type="number" min="8" max="30" step="1" value="24">
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="strength">Strength</label>
+            <div class="range-row">
+              <input id="strength" type="range" min="0" max="100" value="62">
+              <div class="value" id="strengthValue">62</div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="primary" id="renderButton" type="button">Render</button>
+            <a class="download" id="downloadLink" href="#" download aria-disabled="true">Download</a>
+          </div>
+
+          <div class="status" id="status">Load an image or use the demo image.</div>
+          <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+        </section>
+
+        <section class="panel stage" aria-label="Preview">
+          <div class="canvas-wrap">
+            <canvas id="canvas" width="540" height="960"></canvas>
+            <video id="video" controls playsinline></video>
+            <div class="empty" id="emptyState">Preview appears here</div>
+          </div>
+
+          <div class="details">
+            <h2>What this page does</h2>
+            <p>
+              This is the browser-only version of the parked Spatial Scene prototype. It uses a deterministic heuristic depth map and tiled canvas warping. It is not generative video and does not send the image anywhere.
+            </p>
+            <p>
+              Export uses the browser encoder. Some browsers produce MP4, others produce WebM.
+            </p>
+            <div class="facts">
+              <div class="fact"><span>Renderer</span><strong>Canvas mesh warp</strong></div>
+              <div class="fact"><span>Depth</span><strong>Heuristic local map</strong></div>
+              <div class="fact"><span>Aspect</span><strong>9:16</strong></div>
+              <div class="fact"><span>Privacy</span><strong>Local browser only</strong></div>
+              <div class="fact"><span>Output</span><strong id="formatFact">Detecting...</strong></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      const imageInput = document.getElementById("imageInput");
+      const demoButton = document.getElementById("demoButton");
+      const presetInput = document.getElementById("preset");
+      const resolutionInput = document.getElementById("resolution");
+      const durationInput = document.getElementById("duration");
+      const fpsInput = document.getElementById("fps");
+      const strengthInput = document.getElementById("strength");
+      const strengthValue = document.getElementById("strengthValue");
+      const renderButton = document.getElementById("renderButton");
+      const downloadLink = document.getElementById("downloadLink");
+      const statusNode = document.getElementById("status");
+      const progressBar = document.getElementById("progressBar");
+      const canvas = document.getElementById("canvas");
+      const video = document.getElementById("video");
+      const emptyState = document.getElementById("emptyState");
+      const formatFact = document.getElementById("formatFact");
+      const ctx = canvas.getContext("2d", { alpha: false });
+
+      const MIME_CANDIDATES = [
+        "video/webm;codecs=vp9",
+        "video/webm;codecs=vp8",
+        "video/webm",
+        "video/mp4;codecs=avc1.42E01E",
+        "video/mp4"
+      ];
+
+      let sourceImage = null;
+      let prepared = null;
+      let lastVideoUrl = null;
+
+      updateFormatFact();
+      updateStrengthLabel();
+      renderPlaceholder();
+
+      imageInput.addEventListener("change", async () => {
+        const file = imageInput.files[0];
+        if (!file) return;
+        try {
+          setStatus("Loading image...");
+          sourceImage = await loadImageFromFile(file);
+          prepared = null;
+          video.style.display = "none";
+          canvas.style.display = "block";
+          emptyState.style.display = "none";
+          drawStill();
+          setStatus(`${file.name} loaded. Ready to render.`);
+        } catch (error) {
+          setError(error.message);
+        }
+      });
+
+      demoButton.addEventListener("click", async () => {
+        sourceImage = await createDemoImage();
+        prepared = null;
+        imageInput.value = "";
+        video.style.display = "none";
+        canvas.style.display = "block";
+        emptyState.style.display = "none";
+        drawStill();
+        setStatus("Demo image loaded. Ready to render.");
+      });
+
+      resolutionInput.addEventListener("change", () => {
+        prepared = null;
+        if (sourceImage) drawStill();
+      });
+
+      strengthInput.addEventListener("input", () => {
+        updateStrengthLabel();
+        if (sourceImage && !renderButton.disabled) drawStill();
+      });
+
+      renderButton.addEventListener("click", async () => {
+        if (!sourceImage) {
+          setError("Load an image first.");
+          return;
+        }
+
+        const mimeType = pickMimeType();
+        if (!mimeType) {
+          setError("This browser cannot record canvas video.");
+          return;
+        }
+
+        renderButton.disabled = true;
+        demoButton.disabled = true;
+        imageInput.disabled = true;
+        downloadLink.setAttribute("aria-disabled", "true");
+        downloadLink.removeAttribute("href");
+        progressBar.style.width = "0%";
+        video.style.display = "none";
+        canvas.style.display = "block";
+        emptyState.style.display = "none";
+
+        try {
+          prepared = prepareScene();
+          const blob = await recordAnimation(mimeType);
+          const extension = mimeType.includes("mp4") ? "mp4" : "webm";
+          const url = URL.createObjectURL(blob);
+          if (lastVideoUrl) URL.revokeObjectURL(lastVideoUrl);
+          lastVideoUrl = url;
+
+          video.src = url;
+          video.style.display = "block";
+          canvas.style.display = "none";
+          downloadLink.href = url;
+          downloadLink.download = `spatial-scene-${presetInput.value}.${extension}`;
+          downloadLink.removeAttribute("aria-disabled");
+          setStatus(`Rendered ${extension.toUpperCase()} locally. File size: ${formatBytes(blob.size)}.`);
+        } catch (error) {
+          setError(error.message);
+        } finally {
+          renderButton.disabled = false;
+          demoButton.disabled = false;
+          imageInput.disabled = false;
+        }
+      });
+
+      downloadLink.addEventListener("click", (event) => {
+        if (downloadLink.getAttribute("aria-disabled") === "true") {
+          event.preventDefault();
+        }
+      });
+
+      function pickMimeType() {
+        if (!window.MediaRecorder) return "";
+        return MIME_CANDIDATES.find((mimeType) => MediaRecorder.isTypeSupported(mimeType)) || "";
+      }
+
+      function updateFormatFact() {
+        const mimeType = pickMimeType();
+        formatFact.textContent = mimeType ? mimeType.replace("video/", "") : "Unavailable";
+      }
+
+      function updateStrengthLabel() {
+        strengthValue.textContent = strengthInput.value;
+      }
+
+      function setStatus(message) {
+        statusNode.classList.remove("error");
+        statusNode.textContent = message;
+      }
+
+      function setError(message) {
+        statusNode.classList.add("error");
+        statusNode.textContent = message;
+      }
+
+      function parseResolution() {
+        const [width, height] = resolutionInput.value.split("x").map((value) => Number(value));
+        return { width, height };
+      }
+
+      function loadImageFromFile(file) {
+        return new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = () => reject(new Error("Could not read this image."));
+          image.src = URL.createObjectURL(file);
+        });
+      }
+
+      async function createDemoImage() {
+        const demo = document.createElement("canvas");
+        demo.width = 1200;
+        demo.height = 1600;
+        const demoCtx = demo.getContext("2d");
+
+        demoCtx.fillStyle = "#e7e1d2";
+        demoCtx.fillRect(0, 0, demo.width, demo.height);
+
+        const sky = demoCtx.createLinearGradient(0, 0, 0, demo.height);
+        sky.addColorStop(0, "#b9d7dc");
+        sky.addColorStop(0.45, "#f1ddbd");
+        sky.addColorStop(1, "#d4c2a1");
+        demoCtx.fillStyle = sky;
+        demoCtx.fillRect(0, 0, demo.width, demo.height);
+
+        demoCtx.fillStyle = "#3f675f";
+        demoCtx.fillRect(0, 980, 1200, 620);
+        demoCtx.fillStyle = "#274d49";
+        demoCtx.beginPath();
+        demoCtx.moveTo(0, 1080);
+        demoCtx.lineTo(210, 860);
+        demoCtx.lineTo(420, 1080);
+        demoCtx.lineTo(690, 820);
+        demoCtx.lineTo(980, 1090);
+        demoCtx.lineTo(1200, 900);
+        demoCtx.lineTo(1200, 1600);
+        demoCtx.lineTo(0, 1600);
+        demoCtx.closePath();
+        demoCtx.fill();
+
+        demoCtx.fillStyle = "#f6f1e7";
+        demoCtx.fillRect(260, 420, 680, 820);
+        demoCtx.fillStyle = "#1e1e1a";
+        demoCtx.font = "700 86px ui-sans-serif, system-ui";
+        demoCtx.fillText("NO", 430, 720);
+        demoCtx.fillText("AI", 430, 825);
+        demoCtx.fillText("MUTATION", 315, 930);
+
+        demoCtx.fillStyle = "#c44f37";
+        demoCtx.fillRect(325, 1010, 550, 74);
+        demoCtx.fillStyle = "#fffaf0";
+        demoCtx.font = "700 38px ui-sans-serif, system-ui";
+        demoCtx.fillText("SPATIAL SCENE", 398, 1062);
+
+        demoCtx.fillStyle = "rgba(20, 20, 20, 0.16)";
+        demoCtx.beginPath();
+        demoCtx.ellipse(600, 1285, 360, 62, 0, 0, Math.PI * 2);
+        demoCtx.fill();
+
+        return new Promise((resolve) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.src = demo.toDataURL("image/png");
+        });
+      }
+
+      function prepareScene() {
+        const { width, height } = parseResolution();
+        canvas.width = width;
+        canvas.height = height;
+
+        const base = document.createElement("canvas");
+        base.width = width;
+        base.height = height;
+        const baseCtx = base.getContext("2d", { alpha: false });
+
+        drawCover(baseCtx, sourceImage, width, height, 1.12, true);
+        drawContain(baseCtx, sourceImage, width, height, 0.97);
+
+        const depthWidth = 72;
+        const depthHeight = 128;
+        const depth = buildDepthMap(base, depthWidth, depthHeight);
+        const tiles = buildTiles(width, height, depth, depthWidth, depthHeight);
+
+        return { width, height, base, tiles };
+      }
+
+      function drawStill() {
+        prepared = prepareScene();
+        renderFrame(0);
+      }
+
+      function renderPlaceholder() {
+        const { width, height } = parseResolution();
+        canvas.width = width;
+        canvas.height = height;
+        ctx.fillStyle = "#24241f";
+        ctx.fillRect(0, 0, width, height);
+      }
+
+      function drawCover(targetCtx, image, width, height, scale, blur) {
+        targetCtx.save();
+        if (blur) {
+          targetCtx.filter = "blur(18px) saturate(1.08)";
+        }
+        const imageRatio = image.width / image.height;
+        const targetRatio = width / height;
+        let drawWidth;
+        let drawHeight;
+        if (imageRatio > targetRatio) {
+          drawHeight = height * scale;
+          drawWidth = drawHeight * imageRatio;
+        } else {
+          drawWidth = width * scale;
+          drawHeight = drawWidth / imageRatio;
+        }
+        const dx = (width - drawWidth) / 2;
+        const dy = (height - drawHeight) / 2;
+        targetCtx.drawImage(image, dx, dy, drawWidth, drawHeight);
+        targetCtx.restore();
+      }
+
+      function drawContain(targetCtx, image, width, height, scale) {
+        const imageRatio = image.width / image.height;
+        const targetRatio = width / height;
+        let drawWidth;
+        let drawHeight;
+        if (imageRatio > targetRatio) {
+          drawWidth = width * scale;
+          drawHeight = drawWidth / imageRatio;
+        } else {
+          drawHeight = height * scale;
+          drawWidth = drawHeight * imageRatio;
+        }
+        const dx = (width - drawWidth) / 2;
+        const dy = (height - drawHeight) / 2;
+
+        targetCtx.save();
+        targetCtx.shadowColor = "rgba(0, 0, 0, 0.18)";
+        targetCtx.shadowBlur = 24;
+        targetCtx.shadowOffsetY = 12;
+        targetCtx.drawImage(image, dx, dy, drawWidth, drawHeight);
+        targetCtx.restore();
+      }
+
+      function buildDepthMap(base, width, height) {
+        const small = document.createElement("canvas");
+        small.width = width;
+        small.height = height;
+        const smallCtx = small.getContext("2d", { willReadFrequently: true });
+        smallCtx.drawImage(base, 0, 0, width, height);
+        const data = smallCtx.getImageData(0, 0, width, height).data;
+        const luma = new Float32Array(width * height);
+        for (let index = 0; index < luma.length; index += 1) {
+          const offset = index * 4;
+          luma[index] = (data[offset] * 0.299 + data[offset + 1] * 0.587 + data[offset + 2] * 0.114) / 255;
+        }
+
+        const raw = new Float32Array(width * height);
+        let min = Infinity;
+        let max = -Infinity;
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            const index = y * width + x;
+            const nx = x / Math.max(1, width - 1);
+            const ny = y / Math.max(1, height - 1);
+            const cx = nx - 0.5;
+            const cy = ny - 0.47;
+            const center = Math.max(0, 1 - Math.sqrt(cx * cx + cy * cy) / 0.68);
+            const lower = ny;
+            const right = Math.min(width - 1, x + 1);
+            const left = Math.max(0, x - 1);
+            const up = Math.max(0, y - 1);
+            const down = Math.min(height - 1, y + 1);
+            const contrast = Math.abs(luma[index] - luma[y * width + left]) +
+              Math.abs(luma[index] - luma[y * width + right]) +
+              Math.abs(luma[index] - luma[up * width + x]) +
+              Math.abs(luma[index] - luma[down * width + x]);
+            const value = center * 0.52 + Math.min(1, contrast * 3.8) * 0.28 + lower * 0.14 + (1 - luma[index]) * 0.06;
+            raw[index] = value;
+            min = Math.min(min, value);
+            max = Math.max(max, value);
+          }
+        }
+
+        const normalized = new Float32Array(width * height);
+        const span = Math.max(0.0001, max - min);
+        for (let index = 0; index < raw.length; index += 1) {
+          normalized[index] = (raw[index] - min) / span;
+        }
+
+        return smoothDepth(normalized, width, height, 3);
+      }
+
+      function smoothDepth(input, width, height, passes) {
+        let current = input;
+        for (let pass = 0; pass < passes; pass += 1) {
+          const next = new Float32Array(width * height);
+          for (let y = 0; y < height; y += 1) {
+            for (let x = 0; x < width; x += 1) {
+              let total = 0;
+              let count = 0;
+              for (let yy = -1; yy <= 1; yy += 1) {
+                for (let xx = -1; xx <= 1; xx += 1) {
+                  const sx = Math.min(width - 1, Math.max(0, x + xx));
+                  const sy = Math.min(height - 1, Math.max(0, y + yy));
+                  total += current[sy * width + sx];
+                  count += 1;
+                }
+              }
+              next[y * width + x] = total / count;
+            }
+          }
+          current = next;
+        }
+        return current;
+      }
+
+      function buildTiles(width, height, depth, depthWidth, depthHeight) {
+        const size = width >= 720 ? 24 : 20;
+        const tiles = [];
+        for (let y = 0; y < height; y += size) {
+          for (let x = 0; x < width; x += size) {
+            const tileWidth = Math.min(size, width - x);
+            const tileHeight = Math.min(size, height - y);
+            const dx = Math.min(depthWidth - 1, Math.floor((x + tileWidth / 2) / width * depthWidth));
+            const dy = Math.min(depthHeight - 1, Math.floor((y + tileHeight / 2) / height * depthHeight));
+            const depthValue = depth[dy * depthWidth + dx];
+            tiles.push({ x, y, width: tileWidth, height: tileHeight, depth: depthValue });
+          }
+        }
+        tiles.sort((a, b) => a.depth - b.depth);
+        return tiles;
+      }
+
+      function recordAnimation(mimeType) {
+        return new Promise((resolve, reject) => {
+          const fps = clamp(Number(fpsInput.value) || 24, 8, 30);
+          const durationSeconds = clamp(Number(durationInput.value) || 5, 1, 10);
+          const stream = canvas.captureStream(fps);
+          const chunks = [];
+          const recorder = new MediaRecorder(stream, {
+            mimeType,
+            videoBitsPerSecond: prepared.width >= 720 ? 8500000 : 5000000
+          });
+
+          recorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) chunks.push(event.data);
+          };
+          recorder.onerror = () => reject(new Error("Browser video encoder failed."));
+          recorder.onstop = () => {
+            stream.getTracks().forEach((track) => track.stop());
+            if (!chunks.length) {
+              reject(new Error("The browser did not produce a video file."));
+              return;
+            }
+            resolve(new Blob(chunks, { type: mimeType }));
+          };
+
+          recorder.start(250);
+          const start = performance.now();
+          const durationMs = durationSeconds * 1000;
+
+          const step = (now) => {
+            const elapsed = Math.min(durationMs, now - start);
+            const progress = elapsed / durationMs;
+            renderFrame(progress);
+            progressBar.style.width = `${Math.round(progress * 100)}%`;
+            setStatus(`Rendering locally... ${Math.round(progress * 100)}%`);
+            if (progress < 1) {
+              requestAnimationFrame(step);
+            } else {
+              setTimeout(() => recorder.stop(), 140);
+            }
+          };
+
+          requestAnimationFrame(step);
+        });
+      }
+
+      function renderFrame(progress) {
+        const scene = prepared;
+        if (!scene) return;
+        const strength = Number(strengthInput.value) / 100;
+        const motion = getMotion(progress, strength, presetInput.value);
+        ctx.save();
+        ctx.clearRect(0, 0, scene.width, scene.height);
+        ctx.fillStyle = "#202020";
+        ctx.fillRect(0, 0, scene.width, scene.height);
+
+        ctx.save();
+        ctx.translate(scene.width / 2, scene.height / 2);
+        ctx.scale(motion.backScale, motion.backScale);
+        ctx.translate(-scene.width / 2 + motion.backX, -scene.height / 2 + motion.backY);
+        ctx.filter = "blur(10px) saturate(1.04)";
+        ctx.drawImage(scene.base, -18, -18, scene.width + 36, scene.height + 36);
+        ctx.restore();
+
+        ctx.filter = "none";
+        for (const tile of scene.tiles) {
+          const near = tile.depth - 0.42;
+          const px = tile.x + tile.width / 2 - scene.width / 2;
+          const py = tile.y + tile.height / 2 - scene.height / 2;
+          const depthScale = 1 + near * motion.depthZoom;
+          const stretch = 1.8;
+          const targetX = scene.width / 2 + px * motion.globalScale * depthScale + motion.x * near - tile.width / 2 - stretch;
+          const targetY = scene.height / 2 + py * motion.globalScale * depthScale + motion.y * near - tile.height / 2 - stretch;
+          const targetWidth = tile.width * motion.globalScale * depthScale + stretch * 2;
+          const targetHeight = tile.height * motion.globalScale * depthScale + stretch * 2;
+          ctx.drawImage(
+            scene.base,
+            tile.x,
+            tile.y,
+            tile.width,
+            tile.height,
+            targetX,
+            targetY,
+            targetWidth,
+            targetHeight
+          );
+        }
+        ctx.restore();
+      }
+
+      function getMotion(progress, strength, preset) {
+        const ease = progress * progress * (3 - 2 * progress);
+        const loop = Math.sin(progress * Math.PI * 2);
+        const orbitAmount = strength * canvas.width * 0.085;
+        const zoomAmount = strength * 0.105;
+        if (preset === "zoom_in") {
+          return {
+            x: strength * canvas.width * 0.018 * Math.sin(progress * Math.PI),
+            y: -strength * canvas.height * 0.012 * Math.sin(progress * Math.PI),
+            backX: -strength * 5 * ease,
+            backY: strength * 3 * ease,
+            backScale: 1.045 + ease * 0.025,
+            globalScale: 1.02 + ease * zoomAmount,
+            depthZoom: ease * strength * 0.12
+          };
+        }
+        if (preset === "zoom_out") {
+          return {
+            x: -strength * canvas.width * 0.018 * Math.sin(progress * Math.PI),
+            y: strength * canvas.height * 0.012 * Math.sin(progress * Math.PI),
+            backX: strength * 5 * ease,
+            backY: -strength * 3 * ease,
+            backScale: 1.075 - ease * 0.02,
+            globalScale: 1.12 - ease * zoomAmount,
+            depthZoom: (1 - ease) * strength * 0.12
+          };
+        }
+        return {
+          x: loop * orbitAmount,
+          y: Math.sin(progress * Math.PI * 2 + Math.PI / 2) * strength * canvas.height * 0.008,
+          backX: -loop * strength * 10,
+          backY: 0,
+          backScale: 1.06,
+          globalScale: 1.045,
+          depthZoom: strength * 0.07 * Math.cos(progress * Math.PI * 2)
+        };
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function formatBytes(bytes) {
+        if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      }
+    </script>
+  </body>
+</html>

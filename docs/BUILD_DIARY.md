@@ -21,9 +21,10 @@ Spatial Scene / Parallax Video API earned a small public repository artifact, no
 ## Public Shape
 
 - Public GitHub repository.
+- GitHub Pages browser demo where image processing happens on the visitor's device.
 - README presents the project as a parked prototype and case study.
 - Parking decision is documented in `docs/PARKING_DECISION.md`.
 
 ## Status
 
-Ready for public archival once git status confirms only public-safe files are staged.
+Public archival completed. Browser demo added as a GitHub Pages artifact.

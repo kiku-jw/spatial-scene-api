@@ -16,6 +16,7 @@ Do not continue toward a standalone SaaS unless there is paid validation from co
 ## Keep
 
 - Keep the repo public as a build artifact.
+- Keep the GitHub Pages browser demo as a zero-infrastructure public artifact.
 - Keep the internal renderer as a deterministic baseline.
 - Keep DepthFlow integration isolated as an optional external spike, not bundled core code.
 - Keep the research notes because they explain why simple zoom/warp was not enough.
@@ -31,4 +32,4 @@ Reopen only if at least one of these happens:
 
 ## Current Best Next Step
 
-Use this project as a portfolio case and reference implementation. Do not rent production GPU infrastructure for it without demand proof.
+Use this project as a portfolio case, reference implementation, and browser-only demo. Do not rent production GPU infrastructure for it without demand proof.
