@@ -29,4 +29,3 @@
 - Browser-verified `outputs/depthflow_spike/full_10s/gallery.html`: 3 source images, 9 videos, all metadata-loaded at 720x1280 and 10 seconds.
 - ffprobe-confirmed all DepthFlow spike videos in `outputs/depthflow_spike/full_10s` are 720x1280, 30 FPS, 300 frames, and 10 seconds.
 - Added a browser-only GitHub Pages demo in `docs/index.html`; it renders locally with Canvas and MediaRecorder on the visitor's device.
-- Reworked the browser demo renderer from pure mesh warp to a lightweight layered scene pass: ML/heuristic depth creates a soft foreground mask, the background is expanded and filled under that mask, and foreground/background plates move separately for orbit and zoom presets.

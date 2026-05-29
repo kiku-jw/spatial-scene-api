@@ -45,17 +45,6 @@ class BrowserDemoStaticTests(unittest.TestCase):
         self.assertIn('imageSmoothingQuality = "high"', html)
         self.assertNotIn("const size = width >= 720 ? 24 : 20", html)
 
-    def test_renderer_has_layered_scene_mode(self) -> None:
-        html = INDEX_HTML.read_text(encoding="utf-8")
-
-        self.assertIn("<strong>Layered scene warp</strong>", html)
-        self.assertIn("function buildLayeredScene", html)
-        self.assertIn("function buildForegroundMask", html)
-        self.assertIn("function renderLayeredFrame", html)
-        self.assertIn('mode: "layered"', html)
-        self.assertIn('globalCompositeOperation = "destination-in"', html)
-        self.assertIn('globalCompositeOperation = "destination-out"', html)
-
 
 def read_png_size(path: Path) -> tuple[int, int]:
     with path.open("rb") as png:
