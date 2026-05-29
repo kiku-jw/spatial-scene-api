@@ -1,0 +1,37 @@
+from __future__ import annotations
+
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+INDEX_HTML = ROOT / "docs" / "index.html"
+DEMO_IMAGE = ROOT / "docs" / "assets" / "demo.png"
+
+
+class BrowserDemoStaticTests(unittest.TestCase):
+    def test_demo_image_is_a_real_static_asset(self) -> None:
+        self.assertTrue(DEMO_IMAGE.exists())
+        self.assertGreater(DEMO_IMAGE.stat().st_size, 1024 * 1024)
+
+    def test_demo_page_loads_static_demo_image(self) -> None:
+        html = INDEX_HTML.read_text(encoding="utf-8")
+
+        self.assertIn("assets/demo.png", html)
+        self.assertIn("loadDemoImageFromAsset", html)
+
+    def test_rendered_preview_video_loops(self) -> None:
+        html = INDEX_HTML.read_text(encoding="utf-8")
+
+        self.assertIn('<video id="video" controls playsinline loop>', html)
+
+    def test_ml_depth_is_prepared_by_default_with_honest_fallback(self) -> None:
+        html = INDEX_HTML.read_text(encoding="utf-8")
+
+        self.assertIn("startAutoMlDepth", html)
+        self.assertIn("ensurePreferredDepthReady", html)
+        self.assertIn("ML depth unavailable. Heuristic depth is active.", html)
+
+
+if __name__ == "__main__":
+    unittest.main()

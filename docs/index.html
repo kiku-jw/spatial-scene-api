@@ -621,7 +621,7 @@
         <section class="panel stage" aria-label="Preview">
           <div class="canvas-wrap" id="canvasWrap" data-orientation="portrait">
             <canvas id="canvas" width="540" height="960"></canvas>
-            <video id="video" controls playsinline></video>
+            <video id="video" controls playsinline loop></video>
             <div class="empty" id="emptyState">
               <span class="empty-icon" aria-hidden="true">
                 <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
@@ -768,6 +768,7 @@
       const ctx = canvas.getContext("2d", { alpha: false });
 
       const TRANSFORMERS_URL = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/+esm";
+      const DEMO_IMAGE_URL = "assets/demo.png";
       const ML_DEPTH_MODELS = [
         "onnx-community/depth-anything-v2-small",
         "Xenova/depth-anything-small-hf"
@@ -787,8 +788,10 @@
       let prepared = null;
       let lastVideoUrl = null;
       let lastPosterUrl = null;
-      let depthMode = "heuristic";
+      let depthMode = "auto";
       let mlDepthMap = null;
+      let mlDepthPromise = null;
+      let mlDepthFailedKey = "";
       let depthPipelinePromise = null;
 
       updateFormatFact();
@@ -831,14 +834,15 @@
           canvas.style.display = "block";
           emptyState.style.display = "none";
           drawStill();
-          setStatus(`${label} loaded. Ready to render.`);
+          setStatus(`${label} loaded. Preparing ML depth...`);
+          startAutoMlDepth();
         } catch (error) {
           setError(error.message);
         }
       }
 
       demoButton.addEventListener("click", async () => {
-        sourceImage = await createDemoImage();
+        sourceImage = await loadDemoImageFromAsset();
         sourceImageToken += 1;
         prepared = null;
         resetDepthMode();
@@ -847,14 +851,18 @@
         canvas.style.display = "block";
         emptyState.style.display = "none";
         drawStill();
-        setStatus("Demo image loaded. Ready to render.");
+        setStatus("Demo image loaded. Preparing ML depth...");
+        startAutoMlDepth();
       });
 
       resolutionInput.addEventListener("change", () => {
         prepared = null;
         resetDepthMode();
         updatePreviewAspect();
-        if (sourceImage) drawStill();
+        if (sourceImage) {
+          drawStill();
+          startAutoMlDepth();
+        }
         if (!sourceImage) renderPlaceholder();
       });
 
@@ -885,6 +893,7 @@
         document.body.classList.add("is-rendering");
 
         try {
+          await ensurePreferredDepthReady();
           prepared = prepareScene();
           const blob = await recordAnimation(mimeType);
           const extension = mimeType.includes("mp4") ? "mp4" : "webm";
@@ -916,39 +925,9 @@
         }
 
         setControlsBusy(true);
-        progressBar.style.width = "0%";
-        video.style.display = "none";
-        canvas.style.display = "block";
-        emptyState.style.display = "none";
-        document.body.classList.add("is-depthing");
-
         try {
-          const baseScene = prepareBaseScene();
-          const depthSize = getDepthSize(baseScene.width, baseScene.height);
-          setStatus("Loading experimental ML depth model...");
-          const depthMap = await buildMlDepthMap(baseScene.base, depthSize.width, depthSize.height);
-          mlDepthMap = {
-            key: getSceneKey(),
-            width: depthMap.width,
-            height: depthMap.height,
-            data: depthMap.data,
-            label: depthMap.label
-          };
-          depthMode = "ml";
-          prepared = buildSceneFromBase(baseScene, mlDepthMap);
-          renderFrame(0);
-          updateDepthUi();
-          progressBar.style.width = "100%";
-          setStatus(`${depthMap.label} ready. Render will use local browser inference.`);
-        } catch (error) {
-          depthMode = "heuristic";
-          mlDepthMap = null;
-          prepared = null;
-          updateDepthUi();
-          if (sourceImage) drawStill();
-          setError(formatMlError(error));
+          await startAutoMlDepth(true);
         } finally {
-          document.body.classList.remove("is-depthing");
           setControlsBusy(false);
         }
       });
@@ -997,15 +976,19 @@
       }
 
       function updateDepthUi() {
-        const label = depthMode === "ml" && mlDepthMap ? mlDepthMap.label : "Heuristic local map";
+        const loading = Boolean(mlDepthPromise);
+        const hasMlDepth = depthMode === "ml" && mlDepthMap && mlDepthMap.key === getSceneKey();
+        const label = hasMlDepth ? mlDepthMap.label : loading ? "Preparing ML depth" : "Heuristic fallback";
         depthFact.textContent = label;
-        mlDepthLabel.textContent = depthMode === "ml" && mlDepthMap ? "ML Depth Active" : "Experimental ML Depth";
-        mlDepthButton.disabled = !sourceImage;
+        mlDepthLabel.textContent = hasMlDepth ? "ML Depth Active" : loading ? "ML Depth Loading" : "ML Depth Auto";
+        mlDepthButton.disabled = !sourceImage || loading;
       }
 
       function resetDepthMode() {
-        depthMode = "heuristic";
+        depthMode = "auto";
         mlDepthMap = null;
+        mlDepthPromise = null;
+        mlDepthFailedKey = "";
         updateDepthUi();
       }
 
@@ -1013,7 +996,7 @@
         renderButton.disabled = isBusy;
         demoButton.disabled = isBusy;
         imageInput.disabled = isBusy;
-        mlDepthButton.disabled = isBusy || !sourceImage;
+        mlDepthButton.disabled = isBusy || !sourceImage || Boolean(mlDepthPromise);
       }
 
       function setStatus(message) {
@@ -1087,60 +1070,16 @@
         });
       }
 
-      async function createDemoImage() {
-        const demo = document.createElement("canvas");
-        demo.width = 1200;
-        demo.height = 1600;
-        const demoCtx = demo.getContext("2d");
+      async function loadDemoImageFromAsset() {
+        return loadImageFromUrl(DEMO_IMAGE_URL);
+      }
 
-        demoCtx.fillStyle = "#e7e1d2";
-        demoCtx.fillRect(0, 0, demo.width, demo.height);
-
-        const sky = demoCtx.createLinearGradient(0, 0, 0, demo.height);
-        sky.addColorStop(0, "#b9d7dc");
-        sky.addColorStop(0.45, "#f1ddbd");
-        sky.addColorStop(1, "#d4c2a1");
-        demoCtx.fillStyle = sky;
-        demoCtx.fillRect(0, 0, demo.width, demo.height);
-
-        demoCtx.fillStyle = "#3f675f";
-        demoCtx.fillRect(0, 980, 1200, 620);
-        demoCtx.fillStyle = "#274d49";
-        demoCtx.beginPath();
-        demoCtx.moveTo(0, 1080);
-        demoCtx.lineTo(210, 860);
-        demoCtx.lineTo(420, 1080);
-        demoCtx.lineTo(690, 820);
-        demoCtx.lineTo(980, 1090);
-        demoCtx.lineTo(1200, 900);
-        demoCtx.lineTo(1200, 1600);
-        demoCtx.lineTo(0, 1600);
-        demoCtx.closePath();
-        demoCtx.fill();
-
-        demoCtx.fillStyle = "#f6f1e7";
-        demoCtx.fillRect(260, 420, 680, 820);
-        demoCtx.fillStyle = "#1e1e1a";
-        demoCtx.font = "700 86px ui-sans-serif, system-ui";
-        demoCtx.fillText("NO", 430, 720);
-        demoCtx.fillText("AI", 430, 825);
-        demoCtx.fillText("MUTATION", 315, 930);
-
-        demoCtx.fillStyle = "#c44f37";
-        demoCtx.fillRect(325, 1010, 550, 74);
-        demoCtx.fillStyle = "#fffaf0";
-        demoCtx.font = "700 38px ui-sans-serif, system-ui";
-        demoCtx.fillText("SPATIAL SCENE", 398, 1062);
-
-        demoCtx.fillStyle = "rgba(20, 20, 20, 0.16)";
-        demoCtx.beginPath();
-        demoCtx.ellipse(600, 1285, 360, 62, 0, 0, Math.PI * 2);
-        demoCtx.fill();
-
-        return new Promise((resolve) => {
+      function loadImageFromUrl(url) {
+        return new Promise((resolve, reject) => {
           const image = new Image();
           image.onload = () => resolve(image);
-          image.src = demo.toDataURL("image/png");
+          image.onerror = () => reject(new Error("Could not load the demo image."));
+          image.src = url;
         });
       }
 
@@ -1193,6 +1132,83 @@
       function drawStill() {
         prepared = prepareScene();
         renderFrame(0);
+      }
+
+      function hasCurrentMlDepth() {
+        return depthMode === "ml" && mlDepthMap && mlDepthMap.key === getSceneKey();
+      }
+
+      async function ensurePreferredDepthReady() {
+        if (!sourceImage || hasCurrentMlDepth()) return;
+        const depthMap = await startAutoMlDepth();
+        if (!depthMap) {
+          setStatus("Rendering with heuristic depth fallback...");
+        }
+      }
+
+      function startAutoMlDepth(manual = false) {
+        if (!sourceImage) return Promise.resolve(null);
+        if (hasCurrentMlDepth()) return Promise.resolve(mlDepthMap);
+        if (!manual && mlDepthFailedKey === getSceneKey()) return Promise.resolve(null);
+        if (mlDepthPromise) return mlDepthPromise;
+
+        const sceneKey = getSceneKey();
+        const promise = prepareMlDepth(sceneKey, manual);
+        mlDepthPromise = promise;
+        updateDepthUi();
+
+        promise.finally(() => {
+          if (mlDepthPromise === promise) {
+            mlDepthPromise = null;
+            updateDepthUi();
+          }
+        });
+
+        return promise;
+      }
+
+      async function prepareMlDepth(sceneKey, manual) {
+        progressBar.style.width = "0%";
+        video.style.display = "none";
+        canvas.style.display = "block";
+        emptyState.style.display = "none";
+        document.body.classList.add("is-depthing");
+
+        try {
+          const baseScene = prepareBaseScene();
+          const depthSize = getDepthSize(baseScene.width, baseScene.height);
+          setStatus(manual ? "Loading ML depth model..." : "Preparing ML depth locally...");
+          const depthMap = await buildMlDepthMap(baseScene.base, depthSize.width, depthSize.height);
+          if (sceneKey !== getSceneKey()) return null;
+
+          mlDepthMap = {
+            key: sceneKey,
+            width: depthMap.width,
+            height: depthMap.height,
+            data: depthMap.data,
+            label: depthMap.label
+          };
+          depthMode = "ml";
+          mlDepthFailedKey = "";
+          prepared = buildSceneFromBase(baseScene, mlDepthMap);
+          renderFrame(0);
+          updateDepthUi();
+          progressBar.style.width = "100%";
+          setStatus(`${depthMap.label} ready. Render will use local browser inference.`);
+          return mlDepthMap;
+        } catch (error) {
+          if (sceneKey !== getSceneKey()) return null;
+          depthMode = "heuristic";
+          mlDepthMap = null;
+          mlDepthFailedKey = sceneKey;
+          prepared = null;
+          updateDepthUi();
+          if (sourceImage) drawStill();
+          setError(manual ? formatMlError(error) : "ML depth unavailable. Heuristic depth is active.");
+          return null;
+        } finally {
+          document.body.classList.remove("is-depthing");
+        }
       }
 
       function renderPlaceholder() {
@@ -1390,7 +1406,7 @@
         if (event.status === "progress" && typeof event.progress === "number") {
           const progress = clamp(Math.round(event.progress), 1, 90);
           progressBar.style.width = `${progress}%`;
-          setStatus(`Loading experimental ML depth model... ${progress}%`);
+          setStatus(`Loading ML depth model... ${progress}%`);
           return;
         }
         if (event.status === "ready") {
