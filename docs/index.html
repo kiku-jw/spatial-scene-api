@@ -635,7 +635,7 @@
           <div class="status" id="status">Load an image or use the demo image.</div>
           <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
           <div class="facts">
-            <div class="fact"><span>Renderer</span><strong>Canvas mesh warp</strong></div>
+            <div class="fact"><span>Renderer</span><strong>Layered scene warp</strong></div>
             <div class="fact"><span>Depth</span><strong id="depthFact">Heuristic local map</strong></div>
             <div class="fact"><span>Aspect</span><strong id="aspectFact">9:16</strong></div>
             <div class="fact"><span>Privacy</span><strong>Local only</strong></div>
@@ -1103,13 +1103,112 @@
       }
 
       function buildSceneFromBase(baseScene, depthMap) {
+        return buildLayeredScene(baseScene, depthMap);
+      }
+
+      function buildLayeredScene(baseScene, depthMap) {
+        const foregroundMask = buildForegroundMask(baseScene.width, baseScene.height, depthMap.data, depthMap.width, depthMap.height);
+        const background = buildBackgroundPlate(baseScene.base, foregroundMask.canvas, baseScene.width, baseScene.height);
+        const foreground = buildForegroundPlate(baseScene.base, foregroundMask.canvas, baseScene.width, baseScene.height);
         const tiles = buildTiles(baseScene.width, baseScene.height, depthMap.data, depthMap.width, depthMap.height);
         return {
+          mode: "layered",
           width: baseScene.width,
           height: baseScene.height,
           base: baseScene.base,
+          background,
+          foreground,
+          foregroundMask: foregroundMask.canvas,
+          foregroundCoverage: foregroundMask.coverage,
           tiles
         };
+      }
+
+      function buildForegroundMask(width, height, depth, depthWidth, depthHeight) {
+        const small = createSceneCanvas(depthWidth, depthHeight);
+        const imageData = new ImageData(depthWidth, depthHeight);
+        const cutoff = getDepthPercentile(depth, 0.68);
+        let alphaTotal = 0;
+
+        for (let index = 0; index < depth.length; index += 1) {
+          const alpha = smoothstep(cutoff - 0.1, cutoff + 0.14, depth[index]);
+          const offset = index * 4;
+          imageData.data[offset] = 255;
+          imageData.data[offset + 1] = 255;
+          imageData.data[offset + 2] = 255;
+          imageData.data[offset + 3] = Math.round(alpha * 255);
+          alphaTotal += alpha;
+        }
+
+        const smallCtx = small.getContext("2d", { willReadFrequently: true });
+        smallCtx.putImageData(imageData, 0, 0);
+
+        const sharp = createSceneCanvas(width, height);
+        const sharpCtx = sharp.getContext("2d");
+        configureCanvasSmoothing(sharpCtx);
+        sharpCtx.drawImage(small, 0, 0, width, height);
+
+        const mask = createSceneCanvas(width, height);
+        const maskCtx = mask.getContext("2d");
+        configureCanvasSmoothing(maskCtx);
+        const blurRadius = Math.max(8, Math.round(Math.min(width, height) * 0.012));
+        maskCtx.filter = `blur(${blurRadius}px)`;
+        maskCtx.drawImage(sharp, 0, 0);
+        maskCtx.filter = "none";
+        maskCtx.globalAlpha = 0.72;
+        maskCtx.drawImage(sharp, 0, 0);
+        maskCtx.globalAlpha = 1;
+
+        return {
+          canvas: mask,
+          coverage: alphaTotal / Math.max(1, depth.length)
+        };
+      }
+
+      function buildBackgroundPlate(base, foregroundMask, width, height) {
+        const fill = createSceneCanvas(width, height);
+        const fillCtx = fill.getContext("2d");
+        configureCanvasSmoothing(fillCtx);
+        drawExpandedCanvas(fillCtx, base, width, height, 1.1, "blur(18px) saturate(1.04)");
+
+        const background = createSceneCanvas(width, height);
+        const backgroundCtx = background.getContext("2d");
+        configureCanvasSmoothing(backgroundCtx);
+        backgroundCtx.drawImage(base, 0, 0);
+        backgroundCtx.globalCompositeOperation = "destination-out";
+        backgroundCtx.drawImage(foregroundMask, 0, 0);
+        backgroundCtx.globalCompositeOperation = "destination-over";
+        backgroundCtx.drawImage(fill, 0, 0);
+        backgroundCtx.globalCompositeOperation = "source-over";
+        return background;
+      }
+
+      function buildForegroundPlate(base, foregroundMask, width, height) {
+        const foreground = createSceneCanvas(width, height);
+        const foregroundCtx = foreground.getContext("2d");
+        configureCanvasSmoothing(foregroundCtx);
+        foregroundCtx.drawImage(base, 0, 0);
+        foregroundCtx.globalCompositeOperation = "destination-in";
+        foregroundCtx.drawImage(foregroundMask, 0, 0);
+        foregroundCtx.globalCompositeOperation = "source-over";
+        return foreground;
+      }
+
+      function createSceneCanvas(width, height) {
+        const output = document.createElement("canvas");
+        output.width = width;
+        output.height = height;
+        return output;
+      }
+
+      function drawExpandedCanvas(targetCtx, image, width, height, scale, filter) {
+        targetCtx.save();
+        configureCanvasSmoothing(targetCtx);
+        if (filter) targetCtx.filter = filter;
+        const drawWidth = width * scale;
+        const drawHeight = height * scale;
+        targetCtx.drawImage(image, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
+        targetCtx.restore();
       }
 
       function getActiveDepthMap(base) {
@@ -1529,6 +1628,23 @@
         return output;
       }
 
+      function getDepthPercentile(depth, percentile) {
+        const values = [];
+        for (const value of depth) {
+          if (Number.isFinite(value)) values.push(value);
+        }
+        if (!values.length) return 0.5;
+        values.sort((first, second) => first - second);
+        const index = Math.min(values.length - 1, Math.max(0, Math.round((values.length - 1) * percentile)));
+        return values[index];
+      }
+
+      function smoothstep(edge0, edge1, value) {
+        if (edge0 === edge1) return value >= edge1 ? 1 : 0;
+        const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
+        return t * t * (3 - 2 * t);
+      }
+
       function orientDepth(depth, width, height) {
         let centerTotal = 0;
         let centerCount = 0;
@@ -1690,6 +1806,50 @@
         ctx.fillStyle = "#202020";
         ctx.fillRect(0, 0, scene.width, scene.height);
 
+        if (scene.mode === "layered") {
+          renderLayeredFrame(scene, motion);
+          ctx.restore();
+          return;
+        }
+
+        renderMeshFrame(scene, motion);
+        ctx.restore();
+      }
+
+      function renderLayeredFrame(scene, motion) {
+        const foregroundScale = motion.foregroundScale || motion.globalScale;
+        const backgroundScale = motion.backgroundScale || motion.backScale;
+        const midScale = motion.midScale || motion.globalScale;
+        const midX = Number.isFinite(motion.midX) ? motion.midX : 0;
+        const midY = Number.isFinite(motion.midY) ? motion.midY : 0;
+        const foregroundX = Number.isFinite(motion.foregroundX) ? motion.foregroundX : motion.x;
+        const foregroundY = Number.isFinite(motion.foregroundY) ? motion.foregroundY : motion.y;
+
+        ctx.save();
+        ctx.translate(scene.width / 2, scene.height / 2);
+        ctx.scale(backgroundScale, backgroundScale);
+        ctx.translate(-scene.width / 2 + motion.backX, -scene.height / 2 + motion.backY);
+        ctx.drawImage(scene.background, -24, -24, scene.width + 48, scene.height + 48);
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(scene.width / 2, scene.height / 2);
+        ctx.scale(midScale, midScale);
+        ctx.translate(-scene.width / 2 + midX, -scene.height / 2 + midY);
+        ctx.globalAlpha = 0.42;
+        ctx.drawImage(scene.background, 0, 0);
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(scene.width / 2, scene.height / 2);
+        ctx.scale(foregroundScale, foregroundScale);
+        ctx.translate(-scene.width / 2 + foregroundX, -scene.height / 2 + foregroundY);
+        ctx.filter = "drop-shadow(0 16px 28px rgba(0, 0, 0, 0.12))";
+        ctx.drawImage(scene.foreground, 0, 0);
+        ctx.restore();
+      }
+
+      function renderMeshFrame(scene, motion) {
         ctx.save();
         ctx.translate(scene.width / 2, scene.height / 2);
         ctx.scale(motion.backScale, motion.backScale);
@@ -1746,6 +1906,13 @@
             backX: -strength * 5 * ease,
             backY: strength * 3 * ease,
             backScale: 1.045 + ease * 0.025,
+            backgroundScale: 1.04 + ease * 0.018,
+            midX: strength * canvas.width * 0.007 * Math.sin(progress * Math.PI),
+            midY: -strength * canvas.height * 0.005 * Math.sin(progress * Math.PI),
+            midScale: 1.018 + ease * zoomAmount * 0.45,
+            foregroundX: strength * canvas.width * 0.026 * Math.sin(progress * Math.PI),
+            foregroundY: -strength * canvas.height * 0.018 * Math.sin(progress * Math.PI),
+            foregroundScale: 1.026 + ease * zoomAmount * 1.24,
             globalScale: 1.02 + ease * zoomAmount,
             depthZoom: ease * strength * 0.12
           };
@@ -1757,6 +1924,13 @@
             backX: strength * 5 * ease,
             backY: -strength * 3 * ease,
             backScale: 1.075 - ease * 0.02,
+            backgroundScale: 1.07 - ease * 0.018,
+            midX: -strength * canvas.width * 0.007 * Math.sin(progress * Math.PI),
+            midY: strength * canvas.height * 0.005 * Math.sin(progress * Math.PI),
+            midScale: 1.08 - ease * zoomAmount * 0.48,
+            foregroundX: -strength * canvas.width * 0.026 * Math.sin(progress * Math.PI),
+            foregroundY: strength * canvas.height * 0.018 * Math.sin(progress * Math.PI),
+            foregroundScale: 1.14 - ease * zoomAmount * 1.18,
             globalScale: 1.12 - ease * zoomAmount,
             depthZoom: (1 - ease) * strength * 0.12
           };
@@ -1767,6 +1941,13 @@
           backX: -loop * strength * 10,
           backY: 0,
           backScale: 1.06,
+          backgroundScale: 1.055,
+          midX: loop * strength * canvas.width * 0.014,
+          midY: Math.sin(progress * Math.PI * 2 + Math.PI / 2) * strength * canvas.height * 0.004,
+          midScale: 1.025,
+          foregroundX: loop * strength * canvas.width * 0.072,
+          foregroundY: Math.sin(progress * Math.PI * 2 + Math.PI / 2) * strength * canvas.height * 0.012,
+          foregroundScale: 1.045 + strength * 0.018 * Math.cos(progress * Math.PI * 2),
           globalScale: 1.045,
           depthZoom: strength * 0.07 * Math.cos(progress * Math.PI * 2)
         };

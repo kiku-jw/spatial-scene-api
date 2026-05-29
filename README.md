@@ -12,7 +12,7 @@ Try the client-side demo:
 https://kiku-jw.github.io/spatial-scene-api/
 ```
 
-The browser demo is static GitHub Pages. It does not upload images or use the FastAPI backend. Rendering runs on the visitor's device with Canvas and the browser video encoder. The optional **Experimental ML Depth** button downloads a small Transformers.js depth-estimation model into the browser cache and uses it locally. Depending on browser support, the download may be MP4 or WebM.
+The browser demo is static GitHub Pages. It does not upload images or use the FastAPI backend. Rendering runs on the visitor's device with Canvas and the browser video encoder. It tries local Transformers.js depth estimation by default, then falls back to a heuristic depth map when the browser backend is unavailable. The browser renderer uses a lightweight layered scene pass: foreground mask, expanded background plate, and deterministic camera motion. Depending on browser support, the download may be MP4 or WebM.
 
 ## Why This Is Parked
 
@@ -231,7 +231,7 @@ That gallery includes original image, ML depth preview, and the three rendered p
 - A 10-second 720x1280 render can take tens of seconds on a local CPU.
 - ML-depth layered rendering is more spatial, but much slower than fallback and can introduce edge halos around depth boundaries.
 - DepthFlow output is much better and faster locally, but DepthFlow and ShaderFlow are AGPL-3.0. Treat this path as an isolated local spike until licensing is resolved.
-- The GitHub Pages browser demo uses a lighter Canvas renderer. Its default heuristic depth is instant but rough; **Experimental ML Depth** improves the map locally at the cost of a first-run model download and slower setup.
+- The GitHub Pages browser demo uses a lighter layered Canvas renderer. Local ML depth is attempted by default; heuristic depth remains the fallback. The layered pass is more spatial than a pure tile warp, but it can still show soft edge halos where the foreground mask is uncertain.
 - Browser demo export depends on browser encoder support, so output can be MP4 or WebM.
 - No auth, billing, queues, webhooks, batch mode, or cloud deployment.
 - Output resolution is currently tied to aspect ratio with 9:16 rendering at 720x1280.
@@ -265,6 +265,7 @@ Verified on 2026-05-28 and 2026-05-29:
 - Benchmark gallery generated and browser-checked with 8 source images and 24 MP4s
 - User-art ML layered benchmark browser-checked with 13 source images, 13 depth maps, and 39 MP4s
 - GitHub Pages browser demo locally checked with client-side render and downloadable video output
+- Browser layered scene mode locally checked with ML depth, foreground/background plates, looped preview, and downloadable MP4 output
 
 ## Next Best Step
 
