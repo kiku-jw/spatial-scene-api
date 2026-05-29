@@ -767,7 +767,7 @@
       const aspectFact = document.getElementById("aspectFact");
       const ctx = canvas.getContext("2d", { alpha: false });
 
-      const TRANSFORMERS_URL = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0/+esm";
+      const TRANSFORMERS_URL = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/+esm";
       const ML_DEPTH_MODELS = [
         "onnx-community/depth-anything-v2-small",
         "Xenova/depth-anything-small-hf"
@@ -946,7 +946,7 @@
           prepared = null;
           updateDepthUi();
           if (sourceImage) drawStill();
-          setError(`ML depth failed. Using heuristic depth. ${error.message}`);
+          setError(formatMlError(error));
         } finally {
           document.body.classList.remove("is-depthing");
           setControlsBusy(false);
@@ -1155,8 +1155,7 @@
         base.height = height;
         const baseCtx = base.getContext("2d", { alpha: false });
 
-        drawCover(baseCtx, sourceImage, width, height, 1.12, true);
-        drawContain(baseCtx, sourceImage, width, height, 0.97);
+        drawCover(baseCtx, sourceImage, width, height, 1.04, false);
 
         return { width, height, base };
       }
@@ -1370,14 +1369,20 @@
       }
 
       function getDepthBackends() {
-        const backends = [];
-        if (navigator.gpu) {
+        const backends = [{}];
+        if (supportsStableWebGpu()) {
           backends.push({ device: "webgpu", dtype: "fp16" });
           backends.push({ device: "webgpu" });
         }
-        backends.push({ device: "wasm", dtype: "q8" });
-        backends.push({ device: "wasm" });
         return backends;
+      }
+
+      function supportsStableWebGpu() {
+        if (!navigator.gpu) return false;
+        const userAgent = navigator.userAgent || "";
+        const chromium = /Chrome|Chromium|Edg|OPR/.test(userAgent);
+        const iosShell = /CriOS|EdgiOS|FxiOS/.test(userAgent);
+        return chromium && !iosShell;
       }
 
       function updateMlProgress(event) {
@@ -1707,6 +1712,17 @@
       function formatBytes(bytes) {
         if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
         return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      }
+
+      function formatMlError(error) {
+        const message = error && error.message ? error.message : String(error);
+        if (/webgpuInit|WebGPU/i.test(message)) {
+          return "ML depth failed. Safari/WebGPU is not compatible here yet, so heuristic depth is active.";
+        }
+        if (/backend|wasm|onnx/i.test(message)) {
+          return "ML depth failed. Browser ML backend is unavailable, so heuristic depth is active.";
+        }
+        return `ML depth failed. Heuristic depth is active. ${message.slice(0, 120)}`;
       }
     </script>
   </body>
