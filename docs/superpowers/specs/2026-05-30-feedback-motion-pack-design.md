@@ -33,4 +33,3 @@ No new dependencies, models, queues, or UI panels are added.
 - Backend motion tests confirm all loop-friendly presets return identical source coordinates at the start and end of a cycle while changing at the midpoint.
 - DepthFlow command tests confirm each preset maps to a supported external command.
 - Browser smoke test confirms clicking the empty preview opens the file chooser and a rendered preset produces a looping downloadable MP4.
-
