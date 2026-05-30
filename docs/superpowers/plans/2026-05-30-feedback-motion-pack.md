@@ -68,4 +68,4 @@ emptyState.addEventListener("click", () => {
 - [x] Run `.venv/bin/python -m compileall app scripts tests`, JS syntax validation, and `git diff --check`.
 - [x] Start a local static server and use Playwright to confirm the empty preview opens the file picker.
 - [x] Render a short browser MP4 with one new preset and confirm preview loop and download link.
-- [ ] Push `main`, wait for the Pages workflow, and verify the live page contains the new preset options.
+- [x] Push `main`, wait for the Pages workflow, and verify the live page contains the new preset options.
