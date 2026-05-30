@@ -12,7 +12,7 @@ Try the client-side demo:
 https://kiku-jw.github.io/spatial-scene-api/
 ```
 
-The browser demo is static GitHub Pages. It does not upload images or use the FastAPI backend. Rendering runs on the visitor's device with Canvas and the browser video encoder. The optional **Experimental ML Depth** button downloads a small Transformers.js depth-estimation model into the browser cache and uses it locally. Depending on browser support, the download may be MP4 or WebM.
+The browser demo is static GitHub Pages. It does not upload images or use the FastAPI backend. Rendering runs on the visitor's device with Canvas and the browser video encoder. The page automatically tries to download a small Transformers.js depth-estimation model into the browser cache and use it locally. If the browser cannot run it, the renderer falls back to a heuristic depth map and says so explicitly. Depending on browser support, the download may be MP4 or WebM.
 
 ## Why This Is Parked
 
@@ -28,7 +28,7 @@ The strongest future direction would be a broader batch video automation workflo
 ## What It Does
 
 - Upload an image in the web UI.
-- Choose `orbit`, `zoom_in`, `zoom_out`, or loop-friendly `zoom_in_out`.
+- Choose `orbit`, `zoom_in`, `zoom_out`, loop-friendly `zoom_in_out`, `drift`, `push_pull`, or `vertical_float`.
 - Render a 9:16 MP4, defaulting to 10 seconds at 30 FPS.
 - Call the same renderer through `/api/render` or `/v1/parallax`.
 - Use the default deterministic fallback depth provider, or opt into an optional Depth Anything backend.

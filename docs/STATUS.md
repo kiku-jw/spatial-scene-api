@@ -31,3 +31,9 @@
 - Added a browser-only GitHub Pages demo in `docs/index.html`; it renders locally with Canvas and MediaRecorder on the visitor's device.
 - Added `zoom_in_out`, a loop-friendly zoom preset that eases in and back out so rendered preview loops do not jump at the seam.
 - Tuned `orbit` with extra overscan and softer depth displacement to reduce corner exposure and tile-edge trails at higher strength values.
+
+## 2026-05-30
+
+- Responded to first external feedback by making the empty preview `+` open the image picker.
+- Added three loop-friendly motion presets: `drift`, `push_pull`, and `vertical_float`.
+- Kept the browser renderer, internal API renderer, optional DepthFlow adapter, benchmark gallery, and local UI preset lists in sync.

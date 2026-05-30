@@ -8,7 +8,7 @@
 ## Rendering Checks
 
 - Generate a deterministic sample image.
-- Render `orbit`, `zoom_in`, `zoom_out`, and `zoom_in_out`.
+- Render `orbit`, `zoom_in`, `zoom_out`, `zoom_in_out`, `drift`, `push_pull`, and `vertical_float`.
 - Confirm MP4 files exist and are non-zero.
 - Confirm ffprobe duration is close to requested duration.
 - Generate benchmark samples with `python scripts/generate_benchmark_samples.py`.

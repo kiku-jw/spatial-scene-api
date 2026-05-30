@@ -127,6 +127,19 @@ def _motion_args(settings: RenderSettings) -> list[str]:
             "-i",
             "0.08",
         ]
+    if settings.preset == "drift":
+        return [
+            "horizontal",
+            "-i",
+            f"{intensity * 0.22:.2f}",
+            "vertical",
+            "-i",
+            f"{intensity * 0.10:.2f}",
+        ]
+    if settings.preset == "push_pull":
+        return ["dolly", "-i", f"{intensity:.2f}", "horizontal", "-i", "0.05"]
+    if settings.preset == "vertical_float":
+        return ["vertical", "-i", f"{intensity:.2f}", "horizontal", "-i", "0.04"]
     if settings.preset == "zoom_out":
         return [
             "zoom",

@@ -11,7 +11,15 @@ from PIL import Image, ImageEnhance, ImageFilter, ImageOps, UnidentifiedImageErr
 from app.depth import DepthProvider, create_depth_provider
 
 
-ALLOWED_PRESETS = {"orbit", "zoom_in", "zoom_out", "zoom_in_out"}
+ALLOWED_PRESETS = {
+    "drift",
+    "orbit",
+    "push_pull",
+    "vertical_float",
+    "zoom_in",
+    "zoom_in_out",
+    "zoom_out",
+}
 DEFAULT_OUTPUT_HEIGHT = 1280
 
 
@@ -387,6 +395,29 @@ def _source_coordinates(
         shift_y = (centered_y / max(1.0, center_y)) * depth_signed * radial_strength
         pan_x = sway * width * 0.004 * strength
         pan_y = -sway * height * 0.003 * strength
+    elif settings.preset == "drift":
+        sway = math.sin(progress * math.tau)
+        zoom = 1.09
+        shift_x = depth_signed * sway * width * 0.024 * strength
+        shift_y = depth_signed * -sway * height * 0.010 * strength
+        pan_x = sway * width * 0.006 * strength
+        pan_y = -sway * height * 0.004 * strength
+    elif settings.preset == "push_pull":
+        cycle = 0.5 - 0.5 * math.cos(progress * math.tau)
+        sway = math.sin(progress * math.tau)
+        zoom = 1.055 + cycle * 0.095
+        radial_strength = (0.35 + cycle * 0.8) * width * 0.012 * strength
+        shift_x = (centered_x / max(1.0, center_x)) * depth_signed * radial_strength
+        shift_y = (centered_y / max(1.0, center_y)) * depth_signed * radial_strength
+        pan_x = sway * width * 0.003 * strength
+        pan_y = -sway * height * 0.002 * strength
+    elif settings.preset == "vertical_float":
+        sway = math.sin(progress * math.tau)
+        zoom = 1.095
+        shift_x = depth_signed * sway * width * 0.006 * strength
+        shift_y = depth_signed * sway * height * 0.028 * strength
+        pan_x = sway * width * 0.002 * strength
+        pan_y = sway * height * 0.008 * strength
     elif settings.preset == "zoom_out":
         eased = _smoothstep(progress)
         zoom = 1.13 - eased * 0.105

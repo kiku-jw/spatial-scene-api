@@ -9,7 +9,7 @@ Build a local web/API MVP that converts one static image into a deterministic 9:
 - FastAPI backend.
 - Minimal static web UI.
 - Deterministic fallback depth map.
-- Four presets: `orbit`, `zoom_in`, `zoom_out`, `zoom_in_out`.
+- Seven presets: `orbit`, `zoom_in`, `zoom_out`, `zoom_in_out`, `drift`, `push_pull`, `vertical_float`.
 - Local `uploads/` and `outputs/` storage.
 - README with run and API examples.
 

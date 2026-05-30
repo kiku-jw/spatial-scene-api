@@ -17,6 +17,13 @@ class DepthProviderTests(unittest.TestCase):
 
         self.assertEqual(settings.preset, "zoom_in_out")
 
+    def test_build_settings_accepts_feedback_motion_pack(self) -> None:
+        for preset in ("drift", "push_pull", "vertical_float"):
+            with self.subTest(preset=preset):
+                settings = build_settings(preset=preset)
+
+                self.assertEqual(settings.preset, preset)
+
     def test_depth_provider_factory_uses_fallback_by_default(self) -> None:
         provider = create_depth_provider("fallback")
 

@@ -63,6 +63,44 @@ class DepthFlowExternalTests(unittest.TestCase):
         self.assertNotIn("--no-loop", command)
         self.assertNotIn("--reverse", command)
 
+    def test_depthflow_feedback_motion_pack_uses_supported_presets(self) -> None:
+        expected_components = {
+            "drift": ("horizontal", "vertical"),
+            "push_pull": ("dolly", "horizontal"),
+            "vertical_float": ("vertical", "horizontal"),
+        }
+        for preset, components in expected_components.items():
+            with self.subTest(preset=preset):
+                settings = build_settings(preset=preset, strength="medium")
+                command = build_depthflow_command(
+                    Path("/tmp/depthflow"),
+                    Path("input.png"),
+                    Path("output.mp4"),
+                    settings,
+                )
+
+                for component in components:
+                    self.assertIn(component, command)
+                self.assertNotIn("--no-loop", command)
+
+    def test_depthflow_feedback_motion_pack_responds_to_strength(self) -> None:
+        for preset in ("drift", "push_pull", "vertical_float"):
+            with self.subTest(preset=preset):
+                safe_command = build_depthflow_command(
+                    Path("/tmp/depthflow"),
+                    Path("input.png"),
+                    Path("output.mp4"),
+                    build_settings(preset=preset, strength="safe"),
+                )
+                strong_command = build_depthflow_command(
+                    Path("/tmp/depthflow"),
+                    Path("input.png"),
+                    Path("output.mp4"),
+                    build_settings(preset=preset, strength="strong"),
+                )
+
+                self.assertNotEqual(safe_command, strong_command)
+
     def test_job_record_includes_renderer(self) -> None:
         store = JobStore()
         record = store.create(

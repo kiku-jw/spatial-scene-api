@@ -23,6 +23,13 @@ class BrowserDemoStaticTests(unittest.TestCase):
         self.assertIn("assets/demo.png", html)
         self.assertIn("loadDemoImageFromAsset", html)
 
+    def test_empty_preview_plus_opens_image_picker(self) -> None:
+        html = INDEX_HTML.read_text(encoding="utf-8")
+
+        self.assertIn('<button class="empty" id="emptyState" type="button">', html)
+        self.assertIn('emptyState.addEventListener("click"', html)
+        self.assertIn("imageInput.click()", html)
+
     def test_rendered_preview_video_loops(self) -> None:
         html = INDEX_HTML.read_text(encoding="utf-8")
 
@@ -60,6 +67,13 @@ class BrowserDemoStaticTests(unittest.TestCase):
         self.assertIn("depthZoom: orbitStrength * 0.045", html)
         self.assertIn("depthWeight: 0.82", html)
         self.assertIn("return Math.max(1.15, Math.min(3.2", html)
+
+    def test_renderer_offers_feedback_motion_pack(self) -> None:
+        html = INDEX_HTML.read_text(encoding="utf-8")
+
+        for preset in ("drift", "push_pull", "vertical_float"):
+            self.assertIn(f'<option value="{preset}">{preset}</option>', html)
+            self.assertIn(f'if (preset === "{preset}")', html)
 
 
 def read_png_size(path: Path) -> tuple[int, int]:

@@ -15,7 +15,7 @@ from app.depth import create_depth_provider
 from app.render import build_settings, prepare_scene, render_prepared_scene
 
 
-PRESETS = ("orbit", "zoom_in", "zoom_out", "zoom_in_out")
+PRESETS = ("orbit", "zoom_in", "zoom_out", "zoom_in_out", "drift", "push_pull", "vertical_float")
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
 
 
@@ -293,7 +293,7 @@ def build_gallery_html(items: list[BenchmarkItem], base_dir: Path) -> str:
     <main>
       <header>
         <h1>Spatial Scene Benchmark Gallery</h1>
-        <div class="meta">Original image plus orbit, zoom_in, zoom_out, zoom_in_out renders</div>
+        <div class="meta">Original image plus seven deterministic motion presets</div>
       </header>
 {rows}
     </main>

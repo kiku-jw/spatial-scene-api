@@ -58,6 +58,48 @@ class RenderMotionTests(unittest.TestCase):
         displacement = float(numpy.abs(flat_x - near_x).max())
         self.assertLessEqual(displacement, width * 0.035)
 
+    def test_feedback_motion_pack_loops_without_seam(self) -> None:
+        width = 180
+        height = 100
+        grid_x, grid_y = _coordinate_grid(width, height)
+        depth_signed = numpy.linspace(-1.0, 1.0, width * height, dtype=numpy.float32).reshape((height, width))
+
+        for preset in ("drift", "push_pull", "vertical_float"):
+            with self.subTest(preset=preset):
+                settings = build_settings(preset=preset, strength="strong")
+                start_x, start_y = _source_coordinates(
+                    depth_signed,
+                    grid_x,
+                    grid_y,
+                    frame_index=0,
+                    frame_count=121,
+                    settings=settings,
+                    strength=1.0,
+                )
+                quarter_x, quarter_y = _source_coordinates(
+                    depth_signed,
+                    grid_x,
+                    grid_y,
+                    frame_index=30,
+                    frame_count=121,
+                    settings=settings,
+                    strength=1.0,
+                )
+                end_x, end_y = _source_coordinates(
+                    depth_signed,
+                    grid_x,
+                    grid_y,
+                    frame_index=120,
+                    frame_count=121,
+                    settings=settings,
+                    strength=1.0,
+                )
+
+                numpy.testing.assert_allclose(start_x, end_x, atol=0.0001)
+                numpy.testing.assert_allclose(start_y, end_y, atol=0.0001)
+                self.assertGreater(float(numpy.abs(start_x - quarter_x).max()), 0.2)
+                self.assertGreater(float(numpy.abs(start_y - quarter_y).max()), 0.2)
+
 
 if __name__ == "__main__":
     unittest.main()

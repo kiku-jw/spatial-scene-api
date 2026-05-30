@@ -458,15 +458,29 @@
         position: absolute;
         inset: 0;
         display: flex;
+        width: 100%;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         gap: 10px;
+        border: 0;
         padding: 20px;
         color: var(--muted);
         text-align: center;
         font-size: 14px;
         background: #050604;
+        cursor: pointer;
+      }
+
+      .empty:hover .empty-icon,
+      .empty:focus-visible .empty-icon {
+        border-color: var(--accent);
+        background: rgba(220, 188, 100, 0.12);
+      }
+
+      .empty:focus-visible {
+        outline: 2px solid rgba(220, 188, 100, 0.65);
+        outline-offset: -3px;
       }
 
       .empty-icon {
@@ -622,14 +636,14 @@
           <div class="canvas-wrap" id="canvasWrap" data-orientation="portrait">
             <canvas id="canvas" width="540" height="960"></canvas>
             <video id="video" controls playsinline autoplay muted loop></video>
-            <div class="empty" id="emptyState">
+            <button class="empty" id="emptyState" type="button">
               <span class="empty-icon" aria-hidden="true">
                 <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
                   <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 </svg>
               </span>
               <span>Drop or upload an image</span>
-            </div>
+            </button>
           </div>
 
           <div class="status" id="status">Load an image or use the demo image.</div>
@@ -699,6 +713,9 @@
                   <option value="zoom_in">zoom_in</option>
                   <option value="zoom_out">zoom_out</option>
                   <option value="zoom_in_out">zoom_in_out</option>
+                  <option value="drift">drift</option>
+                  <option value="push_pull">push_pull</option>
+                  <option value="vertical_float">vertical_float</option>
                 </select>
               </div>
 
@@ -806,6 +823,10 @@
         const file = imageInput.files[0];
         if (!file) return;
         await handleImageFile(file, file.name);
+      });
+
+      emptyState.addEventListener("click", () => {
+        if (!sourceImage && !imageInput.disabled) imageInput.click();
       });
 
       canvasWrap.addEventListener("dragover", (event) => {
@@ -1776,6 +1797,48 @@
             backScale: 1.045 + pingPong * 0.025,
             globalScale: 1.02 + pingPong * zoomAmount,
             depthZoom: pingPong * strength * 0.12
+          };
+        }
+        if (preset === "drift") {
+          return {
+            x: strength * canvas.width * 0.045 * loop,
+            y: -strength * canvas.height * 0.018 * loop,
+            backX: -strength * 7 * loop,
+            backY: strength * 4 * loop,
+            backScale: 1.085,
+            globalScale: 1.07,
+            depthZoom: strength * 0.035 * Math.cos(progress * Math.PI * 2),
+            depthWeight: 0.86,
+            depthMin: -0.34,
+            depthMax: 0.42
+          };
+        }
+        if (preset === "push_pull") {
+          return {
+            x: strength * canvas.width * 0.010 * loop,
+            y: -strength * canvas.height * 0.006 * loop,
+            backX: -strength * 3 * loop,
+            backY: strength * 2 * loop,
+            backScale: 1.065 + pingPong * 0.025,
+            globalScale: 1.045 + pingPong * 0.095,
+            depthZoom: pingPong * strength * 0.15,
+            depthWeight: 0.9,
+            depthMin: -0.36,
+            depthMax: 0.46
+          };
+        }
+        if (preset === "vertical_float") {
+          return {
+            x: strength * canvas.width * 0.010 * loop,
+            y: strength * canvas.height * 0.050 * loop,
+            backX: -strength * 3 * loop,
+            backY: -strength * 8 * loop,
+            backScale: 1.09,
+            globalScale: 1.075,
+            depthZoom: strength * 0.035 * Math.cos(progress * Math.PI * 2),
+            depthWeight: 0.86,
+            depthMin: -0.34,
+            depthMax: 0.42
           };
         }
         if (preset === "zoom_out") {
