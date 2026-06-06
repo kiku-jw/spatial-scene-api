@@ -33,6 +33,8 @@
 - Upload sample image.
 - Render one preset.
 - Confirm preview video and download link appear.
+- In the browser-only demo, click `Pro Export`, submit the waitlist form, and confirm free render/download still works.
+- Confirm browser validation events do not include image bytes, video bytes, filenames, or local paths.
 - Select `renderer=depthflow`, render a short video, and confirm preview video/download link appear.
 - Open `http://127.0.0.1:8000/outputs/benchmark/gallery.html`.
 - Confirm all benchmark source images and videos load.

@@ -37,3 +37,10 @@
 - Responded to first external feedback by making the empty preview `+` open the image picker.
 - Added three loop-friendly motion presets: `drift`, `push_pull`, and `vertical_float`.
 - Kept the browser renderer, internal API renderer, optional DepthFlow adapter, benchmark gallery, and local UI preset lists in sync.
+
+## 2026-06-06
+
+- Created GitHub issue #1 to track the client-side Pro validation lane.
+- Added a browser-only `Pro Export` fake door that opens a waitlist/intent dialog without blocking free rendering.
+- Added privacy-safe browser event instrumentation with local storage fallback and optional `window.KIKU_SPATIAL_ANALYTICS_ENDPOINT`.
+- Added `docs/PRO_VALIDATION_PLAN.md` with task-level plan, kikuai.dev migration path, distribution plan, kill criteria, and open questions.
