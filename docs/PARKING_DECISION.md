@@ -6,6 +6,29 @@ Park Spatial Scene / Parallax Video API as a public prototype and portfolio arti
 
 Do not continue toward a standalone SaaS unless there is paid validation from content factories, automation users, or creators with recurring batch volume.
 
+## 2026-06-06 Update
+
+The standalone SaaS/API remains parked. The browser-only version is still worth keeping alive as a lightweight validation asset because it has near-zero infrastructure cost and demonstrates the local-first positioning clearly.
+
+Current stage:
+
+- Public prototype and GitHub Pages demo.
+- Browser-only local renderer, not production SaaS.
+- Soft `Pro Export` fake door added on a branch to measure intent before building payments.
+- No real paywall, accounts, billing, GPU backend, or cloud renderer.
+
+Current goal:
+
+- Validate whether users want a better local image-to-parallax export workflow enough to click `Pro`, leave contact info, or ask for batch/high-quality export.
+- Do not optimize for generic SEO or platform buildout before demand proof.
+- Move to `kikuai.dev/tools/spatial-scene` only after there is measurable intent.
+
+Recommended next decision:
+
+- Add a privacy-safe event collector and waitlist destination.
+- Run a two-week demand sprint.
+- Continue only if the fake door produces qualified Pro intent; otherwise keep this as a portfolio/demo artifact.
+
 ## Why
 
 - The technical prototype works, including FastAPI endpoints, local UI, deterministic fallback rendering, optional Depth Anything depth estimation, and optional external DepthFlow rendering.
@@ -33,3 +56,5 @@ Reopen only if at least one of these happens:
 ## Current Best Next Step
 
 Use this project as a portfolio case, reference implementation, and browser-only demo. Do not rent production GPU infrastructure for it without demand proof.
+
+If continuing validation, the next best step is not renderer work. It is measurement: connect a simple event endpoint, send qualified traffic, and evaluate whether users ask for Pro export features.
