@@ -169,6 +169,11 @@
         background: rgba(101, 199, 163, 0.07);
       }
 
+      .big-control.pro {
+        border-color: rgba(213, 184, 106, 0.42);
+        background: rgba(213, 184, 106, 0.09);
+      }
+
       .button-icon {
         display: grid;
         flex: 0 0 auto;
@@ -324,6 +329,62 @@
       .download[aria-disabled="true"] {
         opacity: 0.55;
         cursor: not-allowed;
+      }
+
+      .hint {
+        margin: 9px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .dialog {
+        width: min(92vw, 420px);
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: var(--panel);
+        color: var(--text);
+        box-shadow: var(--shadow);
+        padding: 0;
+      }
+
+      .dialog::backdrop {
+        background: rgba(0, 0, 0, 0.72);
+      }
+
+      .dialog form {
+        display: grid;
+        gap: 14px;
+        padding: 18px;
+      }
+
+      .dialog h2 {
+        margin: 0;
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+
+      .dialog p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .dialog input[type="email"],
+      .dialog select {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--field);
+        color: var(--text);
+        padding: 10px 11px;
+      }
+
+      .dialog-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
       }
 
       .status {
@@ -757,9 +818,55 @@
             <button class="primary" id="renderButton" type="button">Render</button>
             <a class="download" id="downloadLink" href="#" download aria-disabled="true">Download</a>
           </div>
+
+          <div class="control-card">
+            <button class="big-control pro" id="proButton" type="button">
+              <span class="button-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 3 15 9l6 .9-4.5 4.4 1.1 6.2L12 17.6 6.4 20.5l1.1-6.2L3 9.9 9 9l3-6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <span class="button-copy">
+                <strong>Pro Export</strong>
+                <span>1080p, no watermark, batch later</span>
+              </span>
+            </button>
+            <p class="hint">Free local rendering stays available. Pro is only a demand test here.</p>
+          </div>
         </section>
       </div>
     </main>
+
+    <dialog class="dialog" id="proDialog">
+      <form id="proInterestForm" method="dialog">
+        <div>
+          <h2>Pro Export</h2>
+          <p>Pro export is a validation waitlist in this build.</p>
+        </div>
+
+        <div class="field">
+          <label for="proEmail">Email</label>
+          <input id="proEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com">
+        </div>
+
+        <div class="field">
+          <label for="proUseCase">Use case</label>
+          <select id="proUseCase" name="use_case">
+            <option value="creator">Creator / Reels</option>
+            <option value="automation">Automation / bulk images</option>
+            <option value="client_work">Client work</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div class="dialog-actions">
+          <button class="secondary" id="proCancelButton" type="button">Cancel</button>
+          <button class="primary" type="submit">Join waitlist</button>
+        </div>
+
+        <p id="proMessage">Images and videos are not sent by this form.</p>
+      </form>
+    </dialog>
 
     <script>
       const imageInput = document.getElementById("imageInput");
@@ -774,6 +881,13 @@
       const mlDepthButton = document.getElementById("mlDepthButton");
       const mlDepthLabel = document.getElementById("mlDepthLabel");
       const downloadLink = document.getElementById("downloadLink");
+      const proButton = document.getElementById("proButton");
+      const proDialog = document.getElementById("proDialog");
+      const proInterestForm = document.getElementById("proInterestForm");
+      const proCancelButton = document.getElementById("proCancelButton");
+      const proEmail = document.getElementById("proEmail");
+      const proUseCase = document.getElementById("proUseCase");
+      const proMessage = document.getElementById("proMessage");
       const statusNode = document.getElementById("status");
       const progressBar = document.getElementById("progressBar");
       const canvas = document.getElementById("canvas");
@@ -793,6 +907,9 @@
         "Xenova/depth-anything-small-hf"
       ];
       const DEPTH_BASE_SIZE = 256;
+      const ANALYTICS_ENDPOINT = window.KIKU_SPATIAL_ANALYTICS_ENDPOINT || "";
+      const EVENT_STORAGE_KEY = "spatial-scene-events";
+      const CLIENT_ID_KEY = "spatial-scene-client-id";
 
       const MIME_CANDIDATES = [
         "video/mp4;codecs=avc1.42E01E",
@@ -818,10 +935,18 @@
       updatePreviewAspect();
       updateDepthUi();
       renderPlaceholder();
+      trackEvent("page_view", {
+        output: pickMimeType() || "unsupported"
+      });
 
       imageInput.addEventListener("change", async () => {
         const file = imageInput.files[0];
         if (!file) return;
+        trackEvent("image_loaded", {
+          source: "upload",
+          mimeType: file.type || "unknown",
+          sizeBucket: getByteBucket(file.size)
+        });
         await handleImageFile(file, file.name);
       });
 
@@ -865,6 +990,9 @@
       }
 
       demoButton.addEventListener("click", async () => {
+        trackEvent("image_loaded", {
+          source: "demo"
+        });
         sourceImage = await loadDemoImageFromAsset();
         sourceImageToken += 1;
         prepared = null;
@@ -897,15 +1025,22 @@
       renderButton.addEventListener("click", async () => {
         if (!sourceImage) {
           setError("Load an image first.");
+          trackEvent("render_blocked", {
+            reason: "missing_image"
+          });
           return;
         }
 
         const mimeType = pickMimeType();
         if (!mimeType) {
           setError("This browser cannot record canvas video.");
+          trackEvent("render_blocked", {
+            reason: "missing_encoder"
+          });
           return;
         }
 
+        trackEvent("render_click", getRenderEventPayload({ mimeType }));
         setControlsBusy(true);
         downloadLink.setAttribute("aria-disabled", "true");
         downloadLink.removeAttribute("href");
@@ -933,8 +1068,15 @@
           downloadLink.download = `spatial-scene-${presetInput.value}.${extension}`;
           downloadLink.removeAttribute("aria-disabled");
           setStatus(`Rendered ${extension.toUpperCase()} locally. File size: ${formatBytes(blob.size)}.`);
+          trackEvent("render_success", getRenderEventPayload({
+            mimeType,
+            outputSizeBucket: getByteBucket(blob.size)
+          }));
         } catch (error) {
           setError(error.message);
+          trackEvent("render_error", getRenderEventPayload({
+            error: error && error.message ? error.message.slice(0, 96) : "unknown"
+          }));
         } finally {
           document.body.classList.remove("is-rendering");
           setControlsBusy(false);
@@ -958,12 +1100,155 @@
       downloadLink.addEventListener("click", (event) => {
         if (downloadLink.getAttribute("aria-disabled") === "true") {
           event.preventDefault();
+          trackEvent("download_blocked", {
+            reason: "missing_render"
+          });
+          return;
         }
+        trackEvent("download_click", getRenderEventPayload({
+          hrefType: downloadLink.href.startsWith("blob:") ? "blob" : "other"
+        }));
+      });
+
+      proButton.addEventListener("click", () => {
+        trackEvent("pro_click", getRenderEventPayload({
+          source: "control_card"
+        }));
+        proMessage.textContent = "Images and videos are not sent by this form.";
+        if (typeof proDialog.showModal === "function") {
+          proDialog.showModal();
+        } else {
+          proDialog.setAttribute("open", "");
+        }
+        proEmail.focus();
+      });
+
+      proCancelButton.addEventListener("click", () => {
+        closeProDialog();
+      });
+
+      proInterestForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const email = proEmail.value.trim();
+        const useCase = proUseCase.value;
+        const payload = {
+          useCase,
+          hasEmail: Boolean(email),
+          emailDomain: getEmailDomain(email)
+        };
+        trackEvent("pro_interest_submit", payload);
+        storeLocalProInterest({
+          email,
+          useCase,
+          createdAt: new Date().toISOString()
+        });
+        proMessage.textContent = ANALYTICS_ENDPOINT
+          ? "Interest recorded. Payment is not enabled yet."
+          : "Interest saved locally. Add an analytics endpoint before public validation.";
       });
 
       function pickMimeType() {
         if (!window.MediaRecorder) return "";
         return MIME_CANDIDATES.find((mimeType) => MediaRecorder.isTypeSupported(mimeType)) || "";
+      }
+
+      function getRenderEventPayload(extra = {}) {
+        return {
+          preset: presetInput.value,
+          resolution: resolutionInput.value,
+          durationSeconds: clamp(Number(durationInput.value) || 5, 1, 10),
+          fps: clamp(Number(fpsInput.value) || 30, 8, 30),
+          strength: clamp(Number(strengthInput.value) || 0, 0, 100),
+          depthMode: hasCurrentMlDepth() ? "ml" : "heuristic",
+          ...extra
+        };
+      }
+
+      function trackEvent(name, payload = {}) {
+        const event = {
+          name,
+          createdAt: new Date().toISOString(),
+          clientId: getClientId(),
+          page: window.location.pathname,
+          payload: sanitizeAnalyticsPayload(payload)
+        };
+        storeLocalEvent(event);
+        if (!ANALYTICS_ENDPOINT) return;
+        fetch(ANALYTICS_ENDPOINT, {
+          method: "POST",
+          mode: "cors",
+          keepalive: true,
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(event)
+        }).catch(() => {});
+      }
+
+      function sanitizeAnalyticsPayload(payload) {
+        const sanitized = {};
+        for (const [key, value] of Object.entries(payload)) {
+          if (value === undefined || value === null) continue;
+          if (typeof value === "string") {
+            sanitized[key] = value.slice(0, 120);
+            continue;
+          }
+          if (typeof value === "number" || typeof value === "boolean") {
+            sanitized[key] = value;
+          }
+        }
+        return sanitized;
+      }
+
+      function getClientId() {
+        try {
+          const existing = window.localStorage.getItem(CLIENT_ID_KEY);
+          if (existing) return existing;
+          const next = window.crypto && typeof window.crypto.randomUUID === "function"
+            ? window.crypto.randomUUID()
+            : `local-${Date.now()}`;
+          window.localStorage.setItem(CLIENT_ID_KEY, next);
+          return next;
+        } catch {
+          return "local-storage-unavailable";
+        }
+      }
+
+      function storeLocalEvent(event) {
+        try {
+          const existing = JSON.parse(window.localStorage.getItem(EVENT_STORAGE_KEY) || "[]");
+          existing.push(event);
+          window.localStorage.setItem(EVENT_STORAGE_KEY, JSON.stringify(existing.slice(-80)));
+        } catch {}
+      }
+
+      function storeLocalProInterest(interest) {
+        try {
+          const existing = JSON.parse(window.localStorage.getItem("spatial-scene-pro-interest") || "[]");
+          existing.push(interest);
+          window.localStorage.setItem("spatial-scene-pro-interest", JSON.stringify(existing.slice(-20)));
+        } catch {}
+      }
+
+      function closeProDialog() {
+        if (typeof proDialog.close === "function") {
+          proDialog.close();
+          return;
+        }
+        proDialog.removeAttribute("open");
+      }
+
+      function getEmailDomain(email) {
+        const parts = email.split("@");
+        return parts.length === 2 ? parts[1].toLowerCase().slice(0, 80) : "";
+      }
+
+      function getByteBucket(bytes) {
+        if (!Number.isFinite(bytes) || bytes <= 0) return "unknown";
+        if (bytes < 512 * 1024) return "<512kb";
+        if (bytes < 2 * 1024 * 1024) return "512kb-2mb";
+        if (bytes < 8 * 1024 * 1024) return "2mb-8mb";
+        return "8mb+";
       }
 
       function setVideoPosterFromCanvas() {

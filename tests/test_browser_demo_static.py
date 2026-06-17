@@ -75,6 +75,28 @@ class BrowserDemoStaticTests(unittest.TestCase):
             self.assertIn(f'<option value="{preset}">{preset}</option>', html)
             self.assertIn(f'if (preset === "{preset}")', html)
 
+    def test_pro_fake_door_collects_purchase_intent_without_unlocking_render(self) -> None:
+        html = INDEX_HTML.read_text(encoding="utf-8")
+
+        self.assertIn('id="proButton"', html)
+        self.assertIn('id="proDialog"', html)
+        self.assertIn('id="proInterestForm"', html)
+        self.assertIn('trackEvent("pro_click"', html)
+        self.assertIn('trackEvent("pro_interest_submit"', html)
+        self.assertIn("Pro export is a validation waitlist in this build.", html)
+
+    def test_browser_analytics_are_privacy_safe_and_endpoint_ready(self) -> None:
+        html = INDEX_HTML.read_text(encoding="utf-8")
+
+        self.assertIn("KIKU_SPATIAL_ANALYTICS_ENDPOINT", html)
+        self.assertIn("trackEvent", html)
+        self.assertIn("spatial-scene-events", html)
+        self.assertIn('trackEvent("image_loaded"', html)
+        self.assertIn('trackEvent("render_success"', html)
+        self.assertIn('trackEvent("download_click"', html)
+        self.assertNotIn("fileContent", html)
+        self.assertNotIn("videoBlob", html)
+
 
 def read_png_size(path: Path) -> tuple[int, int]:
     with path.open("rb") as png:

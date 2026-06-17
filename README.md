@@ -14,6 +14,8 @@ https://kiku-jw.github.io/spatial-scene-api/
 
 The browser demo is static GitHub Pages. It does not upload images or use the FastAPI backend. Rendering runs on the visitor's device with Canvas and the browser video encoder. The page automatically tries to download a small Transformers.js depth-estimation model into the browser cache and use it locally. If the browser cannot run it, the renderer falls back to a heuristic depth map and says so explicitly. Depending on browser support, the download may be MP4 or WebM.
 
+The demo also includes a soft `Pro Export` fake door for demand validation. It does not enable payments yet and does not upload image or video data. The validation plan lives in [`docs/PRO_VALIDATION_PLAN.md`](docs/PRO_VALIDATION_PLAN.md).
+
 ## Why This Is Parked
 
 The prototype works, but the standalone SaaS opportunity is weak without stronger validation:
