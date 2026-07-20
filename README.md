@@ -1,7 +1,5 @@
 # Spatial Scene / Parallax Video API
 
-**Status:** parked public prototype. This repository is kept as a technical case study and reusable local MVP, not as an active SaaS production plan.
-
 Local MVP for turning a single PNG/JPG/WebP image into a short deterministic MP4 with depth-style parallax. It does not call generative image-to-video models and does not rewrite image content.
 
 ## Browser Demo
@@ -14,16 +12,19 @@ https://kiku-jw.github.io/spatial-scene-api/
 
 The browser demo is static GitHub Pages. It does not upload images or use the FastAPI backend. Rendering runs on the visitor's device with Canvas and the browser video encoder. The page automatically tries to download a small Transformers.js depth-estimation model into the browser cache and use it locally. If the browser cannot run it, the renderer falls back to a heuristic depth map and says so explicitly. Depending on browser support, the download may be MP4 or WebM.
 
-## Why This Is Parked
+## Product Scope
 
-The prototype works, but the standalone SaaS opportunity is weak without stronger validation:
+The repository combines a working prototype, technical case study, and reusable
+local MVP. A standalone hosted product would need stronger demand validation:
 
 - The core effect is useful, but closer to a feature than a high-urgency paid product.
 - Consumer tools already cover parts of the workflow.
 - Better local output currently depends on DepthFlow, which is AGPL-3.0 and not suitable as-is for a closed commercial API.
 - A commercial version would need either a clean-room renderer or a properly licensed rendering stack, plus clear unit economics for GPU/server cost.
 
-The strongest future direction would be a broader batch video automation workflow, not a narrow parallax-only API. The public browser demo keeps the project useful as a portfolio artifact without requiring server infrastructure.
+The strongest product direction is a broader batch video automation workflow,
+not a narrow parallax-only API. The public browser demo keeps the project useful
+without requiring server infrastructure.
 
 ## What It Does
 
